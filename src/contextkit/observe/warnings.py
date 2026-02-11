@@ -7,6 +7,7 @@ warnings through both the event system and Python's logging module.
 from __future__ import annotations
 
 import logging
+from typing import List, Set
 
 from contextkit.observe.events import (
     BudgetEventData,
@@ -28,9 +29,9 @@ class BudgetMonitor:
         thresholds: Sorted list of warning thresholds.
     """
 
-    def __init__(self, thresholds: list[float]) -> None:
+    def __init__(self, thresholds: List[float]) -> None:
         self.thresholds = sorted(thresholds)
-        self._fired: set[float] = set()
+        self._fired: Set[float] = set()
 
     def check(
         self,
@@ -38,7 +39,7 @@ class BudgetMonitor:
         max_tokens: int,
         largest_block_name: str | None = None,
         largest_block_tokens: int = 0,
-    ) -> list[float]:
+    ) -> List[float]:
         """Check token usage against thresholds and emit warnings.
 
         Args:
@@ -56,7 +57,7 @@ class BudgetMonitor:
         usage_fraction = token_count / max_tokens
         self._reset_thresholds_below(usage_fraction)
 
-        fired_this_check: list[float] = []
+        fired_this_check: List[float] = []
         for threshold in self.thresholds:
             if usage_fraction >= threshold and threshold not in self._fired:
                 self._fired.add(threshold)

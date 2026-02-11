@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -49,7 +49,7 @@ class PromptManager:
     """
 
     def __init__(self) -> None:
-        self._templates: dict[str, list[PromptVersion]] = {}
+        self._templates: Dict[str, List[PromptVersion]] = {}
 
     def register(
         self,
@@ -224,7 +224,7 @@ class PromptManager:
         template_a = self.get_template(name, version_a)
         template_b = self.get_template(name, version_b)
 
-        lines: list[str] = []
+        lines: List[str] = []
         lines.append(f"Template '{name}' diff: v{version_a} -> v{version_b}")
 
         if template_a.template == template_b.template:
@@ -245,11 +245,11 @@ class PromptManager:
 
         return "\n".join(lines)
 
-    def list_templates(self) -> list[str]:
+    def list_templates(self) -> List[str]:
         """List all registered template names."""
         return sorted(self._templates.keys())
 
-    def list_versions(self, name: str) -> list[str]:
+    def list_versions(self, name: str) -> List[str]:
         """List all versions of a template.
 
         Args:
@@ -266,7 +266,7 @@ class PromptManager:
 _VARIABLE_PATTERN = re.compile(r"\{\{(\w+)\}\}")
 
 
-def _interpolate(template: str, variables: dict[str, Any]) -> str:
+def _interpolate(template: str, variables: Dict[str, Any]) -> str:
     """Replace {{variable}} placeholders with values.
 
     Args:

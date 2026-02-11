@@ -7,7 +7,7 @@ array, matching OpenAI's expected format.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Dict, List
 
 from contextkit.core import BlockType, ContextWindow
 from contextkit.observe.events import (
@@ -24,7 +24,7 @@ class OpenAIAdapter:
     in the messages array, unlike Anthropic which uses a top-level param.
     """
 
-    def format(self, window: ContextWindow) -> dict[str, Any]:
+    def format(self, window: ContextWindow) -> Dict[str, Any]:
         """Format a ContextWindow for the OpenAI API.
 
         System prompts are added as {"role": "system", "content": ...}
@@ -36,7 +36,7 @@ class OpenAIAdapter:
         Returns:
             A dict with keys: model, messages.
         """
-        messages: list[dict[str, Any]] = []
+        messages: List[Dict[str, Any]] = []
 
         sorted_blocks = sorted(window.blocks, key=lambda b: b.priority, reverse=True)
 
@@ -56,7 +56,7 @@ class OpenAIAdapter:
                 else:
                     messages.extend(block.content)
 
-        payload: dict[str, Any] = {"messages": messages}
+        payload: Dict[str, Any] = {"messages": messages}
 
         if window.model_name:
             payload["model"] = window.model_name
@@ -76,9 +76,9 @@ class OpenAIAdapter:
 
     @staticmethod
     def format_messages(
-        messages: list[dict[str, Any]],
+        messages: List[Dict[str, Any]],
         system: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Format raw messages for the OpenAI API.
 
         Args:
@@ -88,14 +88,14 @@ class OpenAIAdapter:
         Returns:
             A dict ready for openai_client.chat.completions.create().
         """
-        result_messages: list[dict[str, Any]] = []
+        result_messages: List[Dict[str, Any]] = []
         if system:
             result_messages.append({"role": "system", "content": system})
         result_messages.extend(messages)
         return {"messages": result_messages}
 
 
-_BLOCK_TYPE_ROLE_MAP: dict[BlockType, str] = {
+_BLOCK_TYPE_ROLE_MAP: Dict[BlockType, str] = {
     BlockType.SYSTEM_PROMPT: "system",
     BlockType.SCRATCHPAD: "assistant",
 }

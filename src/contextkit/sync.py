@@ -7,7 +7,7 @@ for scripts, notebooks, and non-async codebases.
 from __future__ import annotations
 
 import asyncio
-from typing import Any, cast
+from typing import Any, Dict, List, cast
 
 from contextkit.core import ContextBlock
 from contextkit.memory.backends import (
@@ -53,8 +53,8 @@ class LongTermMemory:
         self,
         key: str,
         content: str,
-        metadata: dict[str, Any] | None = None,
-        tags: list[str] | None = None,
+        metadata: Dict[str, Any] | None = None,
+        tags: List[str] | None = None,
         importance: float = 0.5,
     ) -> MemoryRecord:
         """Store a memory record (sync)."""
@@ -75,11 +75,11 @@ class LongTermMemory:
         self,
         query: str,
         top_k: int = 5,
-        tags: list[str] | None = None,
-    ) -> list[MemoryRecord]:
+        tags: List[str] | None = None,
+    ) -> List[MemoryRecord]:
         """Retrieve matching records (sync)."""
         return cast(
-            list[MemoryRecord],
+            List[MemoryRecord],
             _run_sync(self._async.retrieve(query=query, top_k=top_k, tags=tags)),
         )
 
@@ -87,12 +87,12 @@ class LongTermMemory:
         self,
         query: str,
         top_k: int = 5,
-        tags: list[str] | None = None,
+        tags: List[str] | None = None,
         priority: int = 60,
-    ) -> list[ContextBlock]:
+    ) -> List[ContextBlock]:
         """Retrieve as ContextBlocks (sync)."""
         return cast(
-            list[ContextBlock],
+            List[ContextBlock],
             _run_sync(
                 self._async.retrieve_as_blocks(
                     query=query,
@@ -107,9 +107,9 @@ class LongTermMemory:
         """Delete a record by key (sync)."""
         return cast(bool, _run_sync(self._async.delete(key)))
 
-    def list_records(self, tags: list[str] | None = None) -> list[MemoryRecord]:
+    def list_records(self, tags: List[str] | None = None) -> List[MemoryRecord]:
         """List all records (sync)."""
         return cast(
-            list[MemoryRecord],
+            List[MemoryRecord],
             _run_sync(self._async.list_records(tags=tags)),
         )

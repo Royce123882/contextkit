@@ -11,7 +11,7 @@ import enum
 from collections import defaultdict
 from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -35,7 +35,7 @@ class EventData(BaseModel):
 
     event: ContextEvent
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    details: dict[str, Any] = Field(default_factory=dict)
+    details: Dict[str, Any] = Field(default_factory=dict)
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -66,7 +66,7 @@ class PipelineEventData(EventData):
 
 
 # Global handler registry: event type -> list of callbacks
-_handlers: dict[ContextEvent, list[Callable[..., Any]]] = defaultdict(list)
+_handlers: Dict[ContextEvent, List[Callable[..., Any]]] = defaultdict(list)
 
 
 def on(event: ContextEvent) -> Callable[..., Any]:

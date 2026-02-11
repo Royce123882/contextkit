@@ -6,6 +6,7 @@ Removes blocks below a relevance or quality threshold.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import List
 
 from contextkit.core import ContextBlock
 from contextkit.observe.provenance import Mutation
@@ -36,9 +37,9 @@ class FilterStep(PipelineStep):
         """Return the step name."""
         return "FilterStep"
 
-    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+    def process(self, blocks: List[ContextBlock]) -> List[ContextBlock]:
         """Filter blocks by relevance score or custom predicate."""
-        result: list[ContextBlock] = []
+        result: List[ContextBlock] = []
 
         for block in blocks:
             if self._should_keep(block):

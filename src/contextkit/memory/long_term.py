@@ -7,7 +7,7 @@ MemoryBackend protocol.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Dict, List
 
 from contextkit.core import BlockType, ContextBlock
 from contextkit.memory.backends import (
@@ -44,8 +44,8 @@ class LongTermMemory:
         self,
         key: str,
         content: str,
-        metadata: dict[str, Any] | None = None,
-        tags: list[str] | None = None,
+        metadata: Dict[str, Any] | None = None,
+        tags: List[str] | None = None,
         importance: float = 0.5,
     ) -> MemoryRecord:
         """Store a memory record.
@@ -72,8 +72,8 @@ class LongTermMemory:
         self,
         query: str,
         top_k: int = 5,
-        tags: list[str] | None = None,
-    ) -> list[MemoryRecord]:
+        tags: List[str] | None = None,
+    ) -> List[MemoryRecord]:
         """Retrieve memories matching a query.
 
         Args:
@@ -90,9 +90,9 @@ class LongTermMemory:
         self,
         query: str,
         top_k: int = 5,
-        tags: list[str] | None = None,
+        tags: List[str] | None = None,
         priority: int = 60,
-    ) -> list[ContextBlock]:
+    ) -> List[ContextBlock]:
         """Retrieve memories and convert to ContextBlocks.
 
         Each block has Origin auto-populated with the query, tags,
@@ -108,7 +108,7 @@ class LongTermMemory:
             List of ContextBlocks with populated Origin.
         """
         records = await self.retrieve(query=query, top_k=top_k, tags=tags)
-        blocks: list[ContextBlock] = []
+        blocks: List[ContextBlock] = []
         for record in records:
             origin = Origin(
                 source="memory",
@@ -141,7 +141,7 @@ class LongTermMemory:
         """
         return await self._backend.delete(key)
 
-    async def list_records(self, tags: list[str] | None = None) -> list[MemoryRecord]:
+    async def list_records(self, tags: List[str] | None = None) -> List[MemoryRecord]:
         """List all memories, optionally filtered by tags.
 
         Args:

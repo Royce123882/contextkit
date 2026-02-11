@@ -5,6 +5,8 @@ Removes blocks with overlapping content using word-overlap similarity.
 
 from __future__ import annotations
 
+from typing import List
+
 from contextkit.core import ContextBlock
 from contextkit.observe.provenance import Mutation
 from contextkit.pipeline.base import PipelineStep
@@ -30,10 +32,10 @@ class DeduplicateStep(PipelineStep):
         """Return the step name."""
         return "DeduplicateStep"
 
-    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+    def process(self, blocks: List[ContextBlock]) -> List[ContextBlock]:
         """Remove duplicate blocks based on content similarity."""
         sorted_blocks = sorted(blocks, key=lambda b: b.priority, reverse=True)
-        result: list[ContextBlock] = []
+        result: List[ContextBlock] = []
 
         for block in sorted_blocks:
             if not isinstance(block.content, str):
@@ -49,7 +51,7 @@ class DeduplicateStep(PipelineStep):
         return result
 
     def _find_duplicate(
-        self, block: ContextBlock, existing_blocks: list[ContextBlock]
+        self, block: ContextBlock, existing_blocks: List[ContextBlock]
     ) -> ContextBlock | None:
         """Find an existing block that is a near-duplicate of the given block."""
         if not isinstance(block.content, str):

@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
+from typing import List, Tuple
 
 from pydantic import BaseModel
 
@@ -50,11 +51,11 @@ class FileContext:
     def __init__(
         self,
         base_path: str,
-        extensions: list[str] | None = None,
+        extensions: List[str] | None = None,
     ) -> None:
         self._base_path = Path(base_path)
         self._extensions = extensions
-        self._index: list[FileReference] = []
+        self._index: List[FileReference] = []
 
     @property
     def base_path(self) -> Path:
@@ -62,11 +63,11 @@ class FileContext:
         return self._base_path
 
     @property
-    def index(self) -> list[FileReference]:
+    def index(self) -> List[FileReference]:
         """The indexed file references."""
         return list(self._index)
 
-    def scan(self) -> list[FileReference]:
+    def scan(self) -> List[FileReference]:
         """Scan the base directory and index all matching files.
 
         Stores metadata (path, size, extension) without loading
@@ -98,7 +99,7 @@ class FileContext:
 
         return list(self._index)
 
-    def search(self, query: str, top_k: int = 5) -> list[FileReference]:
+    def search(self, query: str, top_k: int = 5) -> List[FileReference]:
         """Search indexed files by name or path substring.
 
         Args:
@@ -109,7 +110,7 @@ class FileContext:
             Matching FileReferences sorted by relevance.
         """
         query_lower = query.lower()
-        scored: list[tuple[float, FileReference]] = []
+        scored: List[Tuple[float, FileReference]] = []
 
         for ref in self._index:
             name_lower = ref.name.lower()
@@ -133,11 +134,11 @@ class FileContext:
 
     def load(
         self,
-        refs: list[FileReference],
+        refs: List[FileReference],
         max_tokens: int | None = None,
         encoding: str = "cl100k_base",
         priority: int = 60,
-    ) -> list[ContextBlock]:
+    ) -> List[ContextBlock]:
         """Load files into ContextBlocks.
 
         Reads file content and creates blocks with Origin
@@ -153,7 +154,7 @@ class FileContext:
         Returns:
             List of ContextBlocks with file content.
         """
-        blocks: list[ContextBlock] = []
+        blocks: List[ContextBlock] = []
         total_tokens = 0
 
         for i, ref in enumerate(refs):

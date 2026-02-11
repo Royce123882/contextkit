@@ -7,6 +7,8 @@ models for fine-tuned or self-hosted variants.
 
 from __future__ import annotations
 
+from typing import Dict, List
+
 from pydantic import BaseModel
 
 
@@ -37,7 +39,7 @@ class UnknownModelError(Exception):
 
 
 # Built-in model registry
-_REGISTRY: dict[str, ModelSpec] = {
+_REGISTRY: Dict[str, ModelSpec] = {
     "claude-opus-4-6": ModelSpec(
         max_context=200_000,
         encoding="cl100k_base",
@@ -105,6 +107,6 @@ def register_model(name: str, spec: ModelSpec) -> None:
     _REGISTRY[name] = spec
 
 
-def list_models() -> list[str]:
+def list_models() -> List[str]:
     """Return a sorted list of all registered model names."""
     return sorted(_REGISTRY.keys())

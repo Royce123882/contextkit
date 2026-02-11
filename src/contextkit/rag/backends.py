@@ -6,7 +6,7 @@ implementations must follow, along with the Chunk data model.
 
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Dict, List, Protocol, Tuple, runtime_checkable
 
 from pydantic import BaseModel, Field
 
@@ -30,7 +30,7 @@ class Chunk(BaseModel):
     content: str
     source: str = ""
     relevance_score: float = 0.0
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 @runtime_checkable
@@ -46,7 +46,7 @@ class RetrieverBackend(Protocol):
         self,
         query: str,
         top_k: int = 5,
-    ) -> list[Chunk]:
+    ) -> List[Chunk]:
         """Retrieve chunks matching a query.
 
         Args:
@@ -75,13 +75,13 @@ class InMemoryRetriever:
     """
 
     def __init__(self) -> None:
-        self._chunks: list[Chunk] = []
+        self._chunks: List[Chunk] = []
 
     def add_chunk(self, chunk: Chunk) -> None:
         """Add a chunk to the store."""
         self._chunks.append(chunk)
 
-    def add_chunks(self, chunks: list[Chunk]) -> None:
+    def add_chunks(self, chunks: List[Chunk]) -> None:
         """Add multiple chunks to the store."""
         self._chunks.extend(chunks)
 
@@ -89,9 +89,9 @@ class InMemoryRetriever:
         self,
         query: str,
         top_k: int = 5,
-    ) -> list[Chunk]:
+    ) -> List[Chunk]:
         """Retrieve chunks matching the query by keyword overlap."""
-        scored: list[tuple[float, Chunk]] = []
+        scored: List[Tuple[float, Chunk]] = []
         for chunk in self._chunks:
             keyword_score = word_overlap_score(query, chunk.content)
             final_score = (

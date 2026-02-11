@@ -7,7 +7,7 @@ remaining blocks to the Anthropic message format.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Dict, List
 
 from contextkit.core import BlockType, ContextWindow
 from contextkit.observe.events import (
@@ -25,7 +25,7 @@ class AnthropicAdapter:
     that difference transparently.
     """
 
-    def format(self, window: ContextWindow) -> dict[str, Any]:
+    def format(self, window: ContextWindow) -> Dict[str, Any]:
         """Format a ContextWindow for the Anthropic API.
 
         Extracts SYSTEM_PROMPT blocks to the top-level `system` param.
@@ -37,8 +37,8 @@ class AnthropicAdapter:
         Returns:
             A dict with keys: model, max_tokens, system, messages.
         """
-        system_parts: list[str] = []
-        messages: list[dict[str, Any]] = []
+        system_parts: List[str] = []
+        messages: List[Dict[str, Any]] = []
 
         sorted_blocks = sorted(window.blocks, key=lambda b: b.priority, reverse=True)
 
@@ -60,7 +60,7 @@ class AnthropicAdapter:
 
         system_text = "\n\n".join(system_parts) if system_parts else ""
 
-        payload: dict[str, Any] = {
+        payload: Dict[str, Any] = {
             "messages": messages,
         }
 
@@ -85,9 +85,9 @@ class AnthropicAdapter:
 
     @staticmethod
     def format_messages(
-        messages: list[dict[str, Any]],
+        messages: List[Dict[str, Any]],
         system: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Format raw messages for the Anthropic API.
 
         Args:
@@ -97,7 +97,7 @@ class AnthropicAdapter:
         Returns:
             A dict ready for anthropic_client.messages.create().
         """
-        payload: dict[str, Any] = {"messages": messages}
+        payload: Dict[str, Any] = {"messages": messages}
         if system:
             payload["system"] = system
         return payload

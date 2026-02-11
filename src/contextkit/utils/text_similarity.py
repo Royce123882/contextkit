@@ -8,6 +8,8 @@ memory retrieval, and tool selection.
 
 from __future__ import annotations
 
+from typing import Set
+
 
 def word_overlap_similarity(text_a: str, text_b: str) -> float:
     """Calculate symmetric word-overlap similarity between two strings.
@@ -57,6 +59,6 @@ def word_overlap_score(query: str, target: str) -> float:
     return overlap / len(query_words)
 
 
-def _tokenize_to_word_set(text: str) -> set[str]:
+def _tokenize_to_word_set(text: str) -> Set[str]:
     """Split text into a set of unique lowercased words."""
     return set(text.lower().split())

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Dict, List, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -29,8 +29,8 @@ class ToolDefinition(BaseModel):
 
     name: str
     description: str
-    parameters: dict[str, Any] = Field(default_factory=dict)
-    tags: list[str] = Field(default_factory=list)
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    tags: List[str] = Field(default_factory=list)
 
 
 class ToolOutput(BaseModel):
@@ -87,14 +87,14 @@ class ToolRegistry:
     """
 
     def __init__(self) -> None:
-        self._tools: dict[str, ToolDefinition] = {}
+        self._tools: Dict[str, ToolDefinition] = {}
 
     def register(
         self,
         name: str,
         description: str,
-        parameters: dict[str, Any] | None = None,
-        tags: list[str] | None = None,
+        parameters: Dict[str, Any] | None = None,
+        tags: List[str] | None = None,
     ) -> ToolDefinition:
         """Register a tool definition.
 
@@ -132,16 +132,16 @@ class ToolRegistry:
             raise KeyError(f"No tool registered with name '{name}'")
         return self._tools[name]
 
-    def list_tools(self) -> list[str]:
+    def list_tools(self) -> List[str]:
         """List all registered tool names."""
         return sorted(self._tools.keys())
 
     def select(
         self,
         task_description: str,
-        tags: list[str] | None = None,
+        tags: List[str] | None = None,
         max_tools: int | None = None,
-    ) -> list[ContextBlock]:
+    ) -> List[ContextBlock]:
         """Select relevant tools based on a task description.
 
         Uses keyword matching and tag filtering to find tools
@@ -163,7 +163,7 @@ class ToolRegistry:
             candidates = [t for t in candidates if all(tag in t.tags for tag in tags)]
 
         # Score by keyword overlap with task description
-        scored: list[tuple[float, ToolDefinition]] = []
+        scored: List[Tuple[float, ToolDefinition]] = []
         for tool in candidates:
             combined_text = f"{tool.name} {tool.description}"
             score = word_overlap_score(task_description, combined_text)
@@ -174,7 +174,7 @@ class ToolRegistry:
         if max_tools is not None:
             scored = scored[:max_tools]
 
-        blocks: list[ContextBlock] = []
+        blocks: List[ContextBlock] = []
         for score, tool in scored:
             tool_schema = {
                 "name": tool.name,

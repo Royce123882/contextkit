@@ -8,6 +8,8 @@ were included or excluded.
 
 from __future__ import annotations
 
+from typing import List, Tuple
+
 from pydantic import BaseModel
 
 from contextkit.core import ContextBlock, ContextWindow
@@ -45,8 +47,8 @@ class AssemblyReport(BaseModel):
         cost_estimate: Estimated input cost in USD.
     """
 
-    included: list[BlockDecision]
-    excluded: list[BlockDecision]
+    included: List[BlockDecision]
+    excluded: List[BlockDecision]
     total_tokens: int
     budget_remaining: int
     cost_estimate: float
@@ -66,7 +68,7 @@ class ContextAssembler:
     def __init__(self, window: ContextWindow) -> None:
         self._window = window
 
-    def assemble(self, blocks: list[ContextBlock]) -> ContextWindow:
+    def assemble(self, blocks: List[ContextBlock]) -> ContextWindow:
         """Assemble blocks into the window by priority order.
 
         Sorts blocks by priority (highest first), adds those that fit,
@@ -90,11 +92,11 @@ class ContextAssembler:
         return self._window
 
     def _partition_blocks(
-        self, sorted_blocks: list[ContextBlock]
-    ) -> tuple[list[BlockDecision], list[BlockDecision]]:
+        self, sorted_blocks: List[ContextBlock]
+    ) -> Tuple[List[BlockDecision], List[BlockDecision]]:
         """Add fitting blocks to the window and partition into included/excluded."""
-        included: list[BlockDecision] = []
-        excluded: list[BlockDecision] = []
+        included: List[BlockDecision] = []
+        excluded: List[BlockDecision] = []
 
         for block in sorted_blocks:
             block_tokens = block.token_count
@@ -131,8 +133,8 @@ class ContextAssembler:
 
     def _build_report(
         self,
-        included: list[BlockDecision],
-        excluded: list[BlockDecision],
+        included: List[BlockDecision],
+        excluded: List[BlockDecision],
     ) -> AssemblyReport:
         """Build the assembly report from included/excluded decisions."""
         return AssemblyReport(
@@ -146,8 +148,8 @@ class ContextAssembler:
     @staticmethod
     def _emit_assembly_complete(
         report: AssemblyReport,
-        included: list[BlockDecision],
-        excluded: list[BlockDecision],
+        included: List[BlockDecision],
+        excluded: List[BlockDecision],
     ) -> None:
         """Emit the ASSEMBLY_COMPLETE event."""
         emit(

@@ -7,6 +7,8 @@ Supports budget-aware retrieval (stops when token limit is reached).
 
 from __future__ import annotations
 
+from typing import List
+
 from contextkit._tokens import count as count_tokens
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
@@ -43,7 +45,7 @@ class RAGContext:
         min_relevance: float = 0.0,
         encoding: str = "cl100k_base",
         priority: int = 70,
-    ) -> list[ContextBlock]:
+    ) -> List[ContextBlock]:
         """Retrieve chunks and convert to ContextBlocks.
 
         Chunks below min_relevance are filtered out. If max_tokens
@@ -72,7 +74,7 @@ class RAGContext:
         chunks = _deduplicate_chunks(chunks)
 
         # Convert to blocks with budget awareness
-        blocks: list[ContextBlock] = []
+        blocks: List[ContextBlock] = []
         total_tokens = 0
 
         for chunk in chunks:
@@ -111,9 +113,9 @@ class RAGContext:
 
 
 def _deduplicate_chunks(
-    chunks: list[Chunk],
+    chunks: List[Chunk],
     similarity_threshold: float = 0.8,
-) -> list[Chunk]:
+) -> List[Chunk]:
     """Remove near-duplicate chunks based on content overlap.
 
     Uses a simple word-overlap metric. For production use,
@@ -129,7 +131,7 @@ def _deduplicate_chunks(
     if len(chunks) <= 1:
         return chunks
 
-    result: list[Chunk] = []
+    result: List[Chunk] = []
     for chunk in chunks:
         is_duplicate = any(
             word_overlap_similarity(chunk.content, existing.content)

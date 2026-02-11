@@ -7,7 +7,7 @@ and Scratchpad for agent working notes.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Dict, List
 
 from contextkit.core import (
     BlockType,
@@ -28,7 +28,7 @@ class Scratchpad:
     """
 
     def __init__(self) -> None:
-        self._notes: dict[str, str] = {}
+        self._notes: Dict[str, str] = {}
 
     def write(self, key: str, content: str) -> None:
         """Write a note.
@@ -64,7 +64,7 @@ class Scratchpad:
             return True
         return False
 
-    def list_keys(self) -> list[str]:
+    def list_keys(self) -> List[str]:
         """List all note keys."""
         return sorted(self._notes.keys())
 
@@ -107,7 +107,7 @@ class SharedMemory:
     """
 
     def __init__(self) -> None:
-        self._blocks: dict[str, ContextBlock] = {}
+        self._blocks: Dict[str, ContextBlock] = {}
 
     def publish(
         self,
@@ -133,7 +133,7 @@ class SharedMemory:
         """
         return self._blocks.get(name)
 
-    def list_blocks(self) -> list[str]:
+    def list_blocks(self) -> List[str]:
         """List all shared block names."""
         return sorted(self._blocks.keys())
 
@@ -151,7 +151,7 @@ class SharedMemory:
             return True
         return False
 
-    def get_all(self) -> list[ContextBlock]:
+    def get_all(self) -> List[ContextBlock]:
         """Get all shared blocks."""
         return list(self._blocks.values())
 
@@ -172,9 +172,9 @@ class HandoffPackage:
         self,
         source_agent: str,
         target_agent: str,
-        blocks: list[ContextBlock] | None = None,
+        blocks: List[ContextBlock] | None = None,
         scratchpad: Scratchpad | None = None,
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
     ) -> None:
         self.source_agent = source_agent
         self.target_agent = target_agent
@@ -242,7 +242,7 @@ class ContextScope:
         """Timeline tracker, if enabled."""
         return self._timeline
 
-    def record_turn(self, events: list[str] | None = None) -> None:
+    def record_turn(self, events: List[str] | None = None) -> None:
         """Record a timeline snapshot for the current turn.
 
         Args:
@@ -256,7 +256,7 @@ class ContextScope:
                 events=events,
             )
 
-    def import_shared(self, block_names: list[str] | None = None) -> int:
+    def import_shared(self, block_names: List[str] | None = None) -> int:
         """Import blocks from shared memory into the window.
 
         Args:
@@ -286,9 +286,9 @@ class ContextScope:
     def handoff(
         self,
         target_agent: str,
-        block_names: list[str] | None = None,
+        block_names: List[str] | None = None,
         include_scratchpad: bool = True,
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
     ) -> HandoffPackage:
         """Create a handoff package for another agent.
 

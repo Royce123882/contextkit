@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from typing import Any
+from typing import Any, Dict, List
 
 from contextkit._cache import token_count_cache
 
@@ -41,7 +41,7 @@ def _get_encoder(encoding: str) -> Any:
 
 
 def count(
-    content: str | list[dict[str, Any]],
+    content: str | List[Dict[str, Any]],
     encoding: str = "cl100k_base",
 ) -> int:
     """Count the number of tokens in content.
@@ -80,7 +80,7 @@ def _count_string(text: str, encoding: str) -> int:
     return result
 
 
-def _count_messages(messages: list[dict[str, Any]], encoding: str) -> int:
+def _count_messages(messages: List[Dict[str, Any]], encoding: str) -> int:
     """Count tokens in a list of message dicts.
 
     Each message is expected to have at least a "content" key.
@@ -96,7 +96,7 @@ def _count_messages(messages: list[dict[str, Any]], encoding: str) -> int:
 
 
 def fits_budget(
-    content: str | list[dict[str, Any]],
+    content: str | List[Dict[str, Any]],
     max_tokens: int,
     encoding: str = "cl100k_base",
 ) -> bool:

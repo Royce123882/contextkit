@@ -84,6 +84,8 @@ ignore = [
     "S101",   # Use of assert in tests is expected
     "S311",   # Pseudo-random number generators are fine for non-crypto
     "A002",   # Shadowing builtins like `format` is intentional
+    "UP006",  # Use typing.Dict/List/Set/Tuple for explicit type annotations
+    "UP035",  # Allow imports from typing module (Dict, List, Set, Tuple)
 ]
 
 [tool.ruff.lint.per-file-ignores]

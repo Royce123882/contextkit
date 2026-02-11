@@ -7,7 +7,7 @@ Supports both text output (terminals) and HTML (Jupyter notebooks).
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from contextkit.observe.renderers import (
     format_text_table,
@@ -62,7 +62,7 @@ def _inspect_summary(window: ContextWindow, format: str) -> str:
     return result
 
 
-def _build_summary_headers(has_model: bool) -> list[str]:
+def _build_summary_headers(has_model: bool) -> List[str]:
     """Build the header row for the summary table."""
     headers = ["Block", "Type", "Tokens", "Priority"]
     if has_model:
@@ -71,9 +71,9 @@ def _build_summary_headers(has_model: bool) -> list[str]:
     return headers
 
 
-def _build_summary_rows(window: ContextWindow, has_model: bool) -> list[list[str]]:
+def _build_summary_rows(window: ContextWindow, has_model: bool) -> List[List[str]]:
     """Build data rows for the summary table."""
-    rows: list[list[str]] = []
+    rows: List[List[str]] = []
     for block in window.blocks:
         budget_pct = (
             f"{block.token_count / window.max_tokens * 100:.1f}%"
@@ -82,7 +82,7 @@ def _build_summary_rows(window: ContextWindow, has_model: bool) -> list[list[str
         )
         origin_str = block.origin.summary() if block.origin else "-"
 
-        row: list[str] = [
+        row: List[str] = [
             block.display_name,
             block.type.value,
             f"{block.token_count:,}",
@@ -99,9 +99,9 @@ def _build_summary_rows(window: ContextWindow, has_model: bool) -> list[list[str
     return rows
 
 
-def _build_summary_footer(window: ContextWindow, has_model: bool) -> list[str]:
+def _build_summary_footer(window: ContextWindow, has_model: bool) -> List[str]:
     """Build the footer row with totals for the summary table."""
-    footer_row: list[str] = [
+    footer_row: List[str] = [
         "Total",
         "",
         f"{window.token_count:,}",
@@ -147,7 +147,7 @@ def _inspect_block(window: ContextWindow, block_name: str, format: str) -> str:
     return "\n".join(lines)
 
 
-def _build_block_header(block: ContextBlock) -> list[str]:
+def _build_block_header(block: ContextBlock) -> List[str]:
     """Build the header lines for a block inspection."""
     lines = [
         f"Block: {block.display_name}",
@@ -160,12 +160,12 @@ def _build_block_header(block: ContextBlock) -> list[str]:
     return lines
 
 
-def _build_mutation_lines(block: ContextBlock) -> list[str]:
+def _build_mutation_lines(block: ContextBlock) -> List[str]:
     """Build mutation history lines for a block."""
     if not block.mutations:
         return []
 
-    lines: list[str] = ["Mutations:"]
+    lines: List[str] = ["Mutations:"]
     for mutation in block.mutations:
         lines.append(
             f"  [{mutation.step}] {mutation.action}: "
@@ -176,7 +176,7 @@ def _build_mutation_lines(block: ContextBlock) -> list[str]:
     return lines
 
 
-def _build_type_specific_details(block: ContextBlock) -> list[str]:
+def _build_type_specific_details(block: ContextBlock) -> List[str]:
     """Build type-specific drill-down details for a block."""
     from contextkit.core import BlockType
 
@@ -199,7 +199,7 @@ def _build_type_specific_details(block: ContextBlock) -> list[str]:
     return []
 
 
-def _inspect_messages_table(messages: list[dict[str, Any]]) -> list[str]:
+def _inspect_messages_table(messages: List[Dict[str, Any]]) -> List[str]:
     """Build a table of conversation messages for SHORT_TERM_MEMORY."""
     from contextkit._tokens import count
 
@@ -219,7 +219,7 @@ def _inspect_messages_table(messages: list[dict[str, Any]]) -> list[str]:
     return ["", "Messages:", format_text_table(headers, rows)]
 
 
-def _inspect_chunks_table(chunks: list[dict[str, Any]]) -> list[str]:
+def _inspect_chunks_table(chunks: List[Dict[str, Any]]) -> List[str]:
     """Build a table of RAG chunks for RAG blocks."""
     from contextkit._tokens import count
 
@@ -242,7 +242,7 @@ def _inspect_chunks_table(chunks: list[dict[str, Any]]) -> list[str]:
     return ["", "Chunks:", format_text_table(headers, rows)]
 
 
-def _inspect_tools_table(tools: list[dict[str, Any]]) -> list[str]:
+def _inspect_tools_table(tools: List[Dict[str, Any]]) -> List[str]:
     """Build a table of tool definitions for TOOL_DEFINITIONS blocks."""
     headers = ["#", "Name", "Description", "Params"]
     rows = []

@@ -6,7 +6,7 @@ and changed between them, with token and cost deltas.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Tuple
 
 if TYPE_CHECKING:
     from contextkit.core import ContextWindow
@@ -37,8 +37,8 @@ def diff_windows(
     removed = names_a - names_b
     common = names_a & names_b
 
-    changed: list[tuple[str, int, int]] = []
-    unchanged: list[str] = []
+    changed: List[Tuple[str, int, int]] = []
+    unchanged: List[str] = []
 
     for name in common:
         tokens_a = blocks_a[name].token_count
@@ -48,7 +48,7 @@ def diff_windows(
         else:
             unchanged.append(name)
 
-    lines: list[str] = []
+    lines: List[str] = []
     lines.append(
         f"Context diff: {len(window_a.blocks)} blocks -> {len(window_b.blocks)} blocks"
     )

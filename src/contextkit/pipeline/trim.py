@@ -5,6 +5,8 @@ Removes low-priority blocks to fit within a token budget.
 
 from __future__ import annotations
 
+from typing import List, Tuple
+
 from contextkit.core import ContextBlock
 from contextkit.observe.provenance import Mutation
 from contextkit.pipeline.base import PipelineStep
@@ -35,7 +37,7 @@ class TrimStep(PipelineStep):
         """Return the step name."""
         return "TrimStep"
 
-    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+    def process(self, blocks: List[ContextBlock]) -> List[ContextBlock]:
         """Remove low-priority blocks and enforce token budget."""
         result, removed = self._remove_below_priority(blocks)
 
@@ -45,11 +47,11 @@ class TrimStep(PipelineStep):
         return result
 
     def _remove_below_priority(
-        self, blocks: list[ContextBlock]
-    ) -> tuple[list[ContextBlock], list[ContextBlock]]:
+        self, blocks: List[ContextBlock]
+    ) -> Tuple[List[ContextBlock], List[ContextBlock]]:
         """Remove blocks whose priority is below the minimum threshold."""
-        result: list[ContextBlock] = []
-        removed: list[ContextBlock] = []
+        result: List[ContextBlock] = []
+        removed: List[ContextBlock] = []
 
         for block in blocks:
             if block.priority < self._min_priority:
@@ -73,9 +75,9 @@ class TrimStep(PipelineStep):
 
     def _enforce_budget(
         self,
-        blocks: list[ContextBlock],
-        removed: list[ContextBlock],
-    ) -> list[ContextBlock]:
+        blocks: List[ContextBlock],
+        removed: List[ContextBlock],
+    ) -> List[ContextBlock]:
         """Remove lowest-priority blocks until total fits the budget."""
         assert self._max_tokens is not None
 
@@ -85,7 +87,7 @@ class TrimStep(PipelineStep):
 
         # Sort by priority ascending (remove lowest first)
         blocks.sort(key=lambda b: b.priority)
-        kept: list[ContextBlock] = []
+        kept: List[ContextBlock] = []
         budget_used = 0
 
         # Keep from highest priority end

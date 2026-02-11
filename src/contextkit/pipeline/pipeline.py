@@ -6,6 +6,8 @@ collecting reports and emitting events for each step.
 
 from __future__ import annotations
 
+from typing import List, Tuple
+
 from contextkit.core import ContextBlock, ContextWindow
 from contextkit.observe.events import (
     ContextEvent,
@@ -27,12 +29,12 @@ class ContextPipeline:
         steps: Ordered list of PipelineStep instances.
     """
 
-    def __init__(self, steps: list[PipelineStep]) -> None:
+    def __init__(self, steps: List[PipelineStep]) -> None:
         self._steps = steps
         self._last_report: PipelineReport | None = None
 
     @property
-    def steps(self) -> list[PipelineStep]:
+    def steps(self) -> List[PipelineStep]:
         """The pipeline steps."""
         return list(self._steps)
 
@@ -70,11 +72,11 @@ class ContextPipeline:
 
     def _execute_all_steps(
         self,
-        blocks: list[ContextBlock],
+        blocks: List[ContextBlock],
         window: ContextWindow,
-    ) -> list[StepReport]:
+    ) -> List[StepReport]:
         """Execute all pipeline steps and collect reports."""
-        step_reports: list[StepReport] = []
+        step_reports: List[StepReport] = []
 
         for step in self._steps:
             report, blocks[:] = self._execute_step(step, blocks)
@@ -86,8 +88,8 @@ class ContextPipeline:
     def _execute_step(
         self,
         step: PipelineStep,
-        blocks: list[ContextBlock],
-    ) -> tuple[StepReport, list[ContextBlock]]:
+        blocks: List[ContextBlock],
+    ) -> Tuple[StepReport, List[ContextBlock]]:
         """Execute a single pipeline step and return its report."""
         tokens_before = sum(b.token_count for b in blocks)
         blocks_before_count = len(blocks)
@@ -119,7 +121,7 @@ class ContextPipeline:
 
     def _build_report(
         self,
-        step_reports: list[StepReport],
+        step_reports: List[StepReport],
         total_tokens_before: int,
         total_tokens_after: int,
         window: ContextWindow,

@@ -8,7 +8,7 @@ InMemoryBackend for development and testing.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Dict, List, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
@@ -34,8 +34,8 @@ class MemoryRecord(BaseModel):
 
     key: str
     content: str
-    metadata: dict[str, Any] = Field(default_factory=dict)
-    tags: list[str] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    tags: List[str] = Field(default_factory=list)
     stored_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     importance: float = 0.5
 
@@ -53,8 +53,8 @@ class MemoryBackend(Protocol):
         self,
         key: str,
         content: str,
-        metadata: dict[str, Any] | None = None,
-        tags: list[str] | None = None,
+        metadata: Dict[str, Any] | None = None,
+        tags: List[str] | None = None,
         importance: float = 0.5,
     ) -> MemoryRecord:
         """Store a memory record.
@@ -75,8 +75,8 @@ class MemoryBackend(Protocol):
         self,
         query: str,
         top_k: int = 5,
-        tags: list[str] | None = None,
-    ) -> list[MemoryRecord]:
+        tags: List[str] | None = None,
+    ) -> List[MemoryRecord]:
         """Retrieve records matching a query.
 
         Args:
@@ -102,8 +102,8 @@ class MemoryBackend(Protocol):
 
     async def list_records(
         self,
-        tags: list[str] | None = None,
-    ) -> list[MemoryRecord]:
+        tags: List[str] | None = None,
+    ) -> List[MemoryRecord]:
         """List all records, optionally filtered by tags.
 
         Args:
@@ -124,14 +124,14 @@ class InMemoryBackend:
     """
 
     def __init__(self) -> None:
-        self._records: dict[str, MemoryRecord] = {}
+        self._records: Dict[str, MemoryRecord] = {}
 
     async def store(
         self,
         key: str,
         content: str,
-        metadata: dict[str, Any] | None = None,
-        tags: list[str] | None = None,
+        metadata: Dict[str, Any] | None = None,
+        tags: List[str] | None = None,
         importance: float = 0.5,
     ) -> MemoryRecord:
         """Store a record in the in-memory dict."""
@@ -149,10 +149,10 @@ class InMemoryBackend:
         self,
         query: str,
         top_k: int = 5,
-        tags: list[str] | None = None,
-    ) -> list[MemoryRecord]:
+        tags: List[str] | None = None,
+    ) -> List[MemoryRecord]:
         """Retrieve records by keyword matching and importance."""
-        results: list[MemoryRecord] = []
+        results: List[MemoryRecord] = []
 
         for record in self._records.values():
             if tags and not all(tag in record.tags for tag in tags):
@@ -175,8 +175,8 @@ class InMemoryBackend:
 
     async def list_records(
         self,
-        tags: list[str] | None = None,
-    ) -> list[MemoryRecord]:
+        tags: List[str] | None = None,
+    ) -> List[MemoryRecord]:
         """List records, optionally filtered by tags."""
         if tags is None:
             return list(self._records.values())

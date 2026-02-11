@@ -6,6 +6,7 @@ Compacts verbose blocks by summarization or truncation.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import List
 
 from contextkit._tokens import count as count_tokens
 from contextkit.core import ContextBlock
@@ -42,7 +43,7 @@ class CompactStep(PipelineStep):
         """Return the step name."""
         return "CompactStep"
 
-    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+    def process(self, blocks: List[ContextBlock]) -> List[ContextBlock]:
         """Compact long blocks by truncation or custom compactor."""
         return [self._compact_block(block) for block in blocks]
 

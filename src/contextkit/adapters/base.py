@@ -7,7 +7,7 @@ expected by a specific LLM provider's API.
 
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Dict, List, Protocol, runtime_checkable
 
 from contextkit.core import ContextWindow
 
@@ -20,7 +20,7 @@ class ProviderAdapter(Protocol):
     ContextWindow into a provider-specific payload dict.
     """
 
-    def format(self, window: ContextWindow) -> dict[str, Any]:
+    def format(self, window: ContextWindow) -> Dict[str, Any]:
         """Format a ContextWindow into a provider-specific payload.
 
         Args:
@@ -33,9 +33,9 @@ class ProviderAdapter(Protocol):
 
     @staticmethod
     def format_messages(
-        messages: list[dict[str, Any]],
+        messages: List[Dict[str, Any]],
         system: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> Dict[str, Any]:
         """Format raw messages without a ContextWindow.
 
         Convenience method for standalone use. Converts a list of

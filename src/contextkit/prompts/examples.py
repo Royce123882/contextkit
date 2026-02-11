@@ -7,7 +7,7 @@ example fitting.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Dict, List, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -31,8 +31,8 @@ class Example(BaseModel):
     example_id: str
     input_text: str
     output_text: str
-    tags: list[str] = Field(default_factory=list)
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    tags: List[str] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
     @property
     def formatted(self) -> str:
@@ -49,15 +49,15 @@ class ExampleStore:
     """
 
     def __init__(self) -> None:
-        self._examples: dict[str, Example] = {}
+        self._examples: Dict[str, Example] = {}
 
     def add(
         self,
         example_id: str,
         input_text: str,
         output_text: str,
-        tags: list[str] | None = None,
-        metadata: dict[str, Any] | None = None,
+        tags: List[str] | None = None,
+        metadata: Dict[str, Any] | None = None,
     ) -> Example:
         """Add an example to the store.
 
@@ -101,8 +101,8 @@ class ExampleStore:
         self,
         input_text: str,
         top_k: int = 3,
-        tags: list[str] | None = None,
-    ) -> list[tuple[Example, float]]:
+        tags: List[str] | None = None,
+    ) -> List[Tuple[Example, float]]:
         """Select examples most similar to the given input.
 
         Uses word-overlap similarity for selection. Returns
@@ -116,7 +116,7 @@ class ExampleStore:
         Returns:
             List of (Example, similarity_score) tuples.
         """
-        scored: list[tuple[float, Example]] = []
+        scored: List[Tuple[float, Example]] = []
 
         for example in self._examples.values():
             if tags and not all(t in example.tags for t in tags):
@@ -133,10 +133,10 @@ class ExampleStore:
         input_text: str,
         max_tokens: int,
         top_k: int = 10,
-        tags: list[str] | None = None,
+        tags: List[str] | None = None,
         encoding: str = "cl100k_base",
         priority: int = 55,
-    ) -> list[ContextBlock]:
+    ) -> List[ContextBlock]:
         """Select best examples that fit within a token budget.
 
         Selects examples by similarity, then greedily adds them
@@ -155,7 +155,7 @@ class ExampleStore:
         """
         selected = self.select(input_text, top_k=top_k, tags=tags)
 
-        blocks: list[ContextBlock] = []
+        blocks: List[ContextBlock] = []
         total_tokens = 0
 
         for example, similarity in selected:
@@ -185,7 +185,7 @@ class ExampleStore:
 
         return blocks
 
-    def list_examples(self) -> list[str]:
+    def list_examples(self) -> List[str]:
         """List all example IDs."""
         return sorted(self._examples.keys())
 

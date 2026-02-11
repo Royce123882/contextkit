@@ -6,6 +6,8 @@ high-priority content at the start and end of the sequence.
 
 from __future__ import annotations
 
+from typing import List
+
 from contextkit.core import ContextBlock
 from contextkit.observe.provenance import Mutation
 from contextkit.pipeline.base import PipelineStep
@@ -31,7 +33,7 @@ class ReorderStep(PipelineStep):
         """Return the step name."""
         return "ReorderStep"
 
-    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+    def process(self, blocks: List[ContextBlock]) -> List[ContextBlock]:
         """Reorder blocks using the configured strategy."""
         if len(blocks) <= 2:
             return blocks
@@ -40,7 +42,7 @@ class ReorderStep(PipelineStep):
             return self._reorder_edges(blocks)
         return blocks
 
-    def _reorder_edges(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+    def _reorder_edges(self, blocks: List[ContextBlock]) -> List[ContextBlock]:
         """Place highest priority at start/end, lowest in middle."""
         sorted_by_priority = sorted(
             enumerate(blocks),
@@ -49,7 +51,7 @@ class ReorderStep(PipelineStep):
         )
 
         block_count = len(sorted_by_priority)
-        result: list[ContextBlock | None] = [None] * block_count
+        result: List[ContextBlock | None] = [None] * block_count
 
         start_idx = 0
         end_idx = block_count - 1

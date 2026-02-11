@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from typing import List, Set
 
 from pydantic import BaseModel, Field
 
@@ -34,12 +35,12 @@ class TurnSnapshot(BaseModel):
     token_count: int = 0
     max_tokens: int = 0
     block_count: int = 0
-    block_names: list[str] = Field(default_factory=list)
-    blocks_added: list[str] = Field(default_factory=list)
-    blocks_removed: list[str] = Field(default_factory=list)
-    blocks_mutated: list[str] = Field(default_factory=list)
+    block_names: List[str] = Field(default_factory=list)
+    blocks_added: List[str] = Field(default_factory=list)
+    blocks_removed: List[str] = Field(default_factory=list)
+    blocks_mutated: List[str] = Field(default_factory=list)
     budget_percent: float = 0.0
-    events: list[str] = Field(default_factory=list)
+    events: List[str] = Field(default_factory=list)
 
 
 class ContextTimeline:
@@ -51,12 +52,12 @@ class ContextTimeline:
     """
 
     def __init__(self, max_tokens: int = 0) -> None:
-        self._snapshots: list[TurnSnapshot] = []
+        self._snapshots: List[TurnSnapshot] = []
         self._max_tokens = max_tokens
         self._current_turn = 0
 
     @property
-    def snapshots(self) -> list[TurnSnapshot]:
+    def snapshots(self) -> List[TurnSnapshot]:
         """All recorded snapshots."""
         return list(self._snapshots)
 
@@ -68,8 +69,8 @@ class ContextTimeline:
     def record(
         self,
         token_count: int,
-        block_names: list[str],
-        events: list[str] | None = None,
+        block_names: List[str],
+        events: List[str] | None = None,
     ) -> TurnSnapshot:
         """Record a snapshot for the current turn.
 
@@ -87,7 +88,7 @@ class ContextTimeline:
         self._current_turn += 1
 
         # Compute diffs from previous turn
-        prev_names: set[str] = set()
+        prev_names: Set[str] = set()
         if self._snapshots:
             prev_names = set(self._snapshots[-1].block_names)
 
@@ -133,15 +134,15 @@ class ContextTimeline:
         Returns:
             A formatted string showing how context evolved.
         """
-        lines: list[str] = []
+        lines: List[str] = []
         for snap in self._snapshots:
-            parts: list[str] = [
+            parts: List[str] = [
                 f"Turn {snap.turn:>3}:",
                 f"{snap.token_count:>8,} tokens",
                 f"({snap.budget_percent:.1f}%)",
             ]
 
-            changes: list[str] = []
+            changes: List[str] = []
             if snap.blocks_added:
                 for name in snap.blocks_added:
                     changes.append(f"+{name}")

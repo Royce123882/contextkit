@@ -7,7 +7,7 @@ and PipelineReport data models used by all pipeline steps.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
@@ -33,7 +33,7 @@ class StepReport(BaseModel):
     tokens_before: int = 0
     tokens_after: int = 0
     tokens_saved: int = 0
-    details: dict[str, Any] = Field(default_factory=dict)
+    details: Dict[str, Any] = Field(default_factory=dict)
 
 
 class PipelineReport(BaseModel):
@@ -47,7 +47,7 @@ class PipelineReport(BaseModel):
         cost_delta: Estimated cost savings.
     """
 
-    steps: list[StepReport] = Field(default_factory=list)
+    steps: List[StepReport] = Field(default_factory=list)
     total_tokens_before: int = 0
     total_tokens_after: int = 0
     total_tokens_saved: int = 0
@@ -69,7 +69,7 @@ class PipelineStep(ABC):
         ...
 
     @abstractmethod
-    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+    def process(self, blocks: List[ContextBlock]) -> List[ContextBlock]:
         """Process blocks and return the modified list.
 
         Args:

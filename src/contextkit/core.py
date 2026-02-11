@@ -7,7 +7,7 @@ data model, ContextWindow container, and BudgetExceeded exception.
 from __future__ import annotations
 
 import enum
-from typing import Any
+from typing import Any, Dict, List, Tuple
 
 from pydantic import BaseModel, Field
 
@@ -60,12 +60,12 @@ class ContextBlock(BaseModel):
     """
 
     type: BlockType
-    content: str | list[dict[str, Any]]
+    content: str | List[Dict[str, Any]]
     priority: int = 50
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     name: str | None = None
     origin: Origin | None = None
-    mutations: list[Mutation] = Field(default_factory=list)
+    mutations: List[Mutation] = Field(default_factory=list)
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -129,7 +129,7 @@ class ContextWindow:
         self,
         model: str | None = None,
         max_tokens: int | None = None,
-        budget_warnings: list[float] | None = None,
+        budget_warnings: List[float] | None = None,
     ) -> None:
         self._model_name: str | None = None
         if model is not None:
@@ -139,7 +139,7 @@ class ContextWindow:
         else:
             raise ValueError("Either 'model' or 'max_tokens' must be provided.")
 
-        self._blocks: list[ContextBlock] = []
+        self._blocks: List[ContextBlock] = []
         self._cached_token_count: int | None = None
         self._assembly_report: Any = None  # Set by ContextAssembler
 
@@ -180,7 +180,7 @@ class ContextWindow:
         return self._encoding
 
     @property
-    def blocks(self) -> list[ContextBlock]:
+    def blocks(self) -> List[ContextBlock]:
         """Ordered list of context blocks."""
         return list(self._blocks)
 
@@ -260,7 +260,7 @@ class ContextWindow:
 
         raise KeyError(f"No block with name '{name}' found.")
 
-    def render(self) -> list[dict[str, Any]]:
+    def render(self) -> List[Dict[str, Any]]:
         """Return assembled messages list, ordered by block priority.
 
         System prompts are placed first, then remaining blocks sorted
@@ -271,7 +271,7 @@ class ContextWindow:
         """
         sorted_blocks = sorted(self._blocks, key=lambda b: b.priority, reverse=True)
 
-        messages: list[dict[str, Any]] = []
+        messages: List[Dict[str, Any]] = []
         for block in sorted_blocks:
             if isinstance(block.content, str):
                 role = "system" if block.type == BlockType.SYSTEM_PROMPT else "user"
@@ -289,7 +289,7 @@ class ContextWindow:
 
         return messages
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """Full serialization including provenance and metadata.
 
         Returns:
@@ -311,7 +311,7 @@ class ContextWindow:
         }
 
     @staticmethod
-    def _serialize_block(block: ContextBlock) -> dict[str, Any]:
+    def _serialize_block(block: ContextBlock) -> Dict[str, Any]:
         """Serialize a single block to a dict for JSON output."""
         return {
             "name": block.display_name,
@@ -419,7 +419,7 @@ class ContextWindow:
             largest_block_tokens=largest_tokens,
         )
 
-    def _find_largest_block(self) -> tuple[str | None, int]:
+    def _find_largest_block(self) -> Tuple[str | None, int]:
         """Find the block with the most tokens.
 
         Returns:
@@ -493,7 +493,7 @@ class ContextWindow:
             )
         )
 
-    def replace_blocks(self, blocks: list[ContextBlock]) -> None:
+    def replace_blocks(self, blocks: List[ContextBlock]) -> None:
         """Replace all blocks (used by ContextPipeline).
 
         Args:

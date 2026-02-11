@@ -7,6 +7,8 @@ in Jupyter notebooks.
 
 from __future__ import annotations
 
+from typing import List
+
 
 def detect_environment() -> str:
     """Detect whether we're running in Jupyter or a terminal.
@@ -29,9 +31,9 @@ def detect_environment() -> str:
 
 
 def format_text_table(
-    headers: list[str],
-    rows: list[list[str]],
-    footer: list[str] | None = None,
+    headers: List[str],
+    rows: List[List[str]],
+    footer: List[str] | None = None,
 ) -> str:
     """Render a simple ASCII table.
 
@@ -53,7 +55,7 @@ def format_text_table(
         for i in range(len(headers))
     ]
 
-    def format_row(cells: list[str]) -> str:
+    def format_row(cells: List[str]) -> str:
         parts = []
         for i, cell in enumerate(cells):
             width = col_widths[i] if i < len(col_widths) else len(cell)

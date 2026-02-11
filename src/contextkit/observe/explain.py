@@ -7,7 +7,7 @@ and mutation log to give a complete answer.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from contextkit.assembler import BlockDecision
@@ -49,7 +49,7 @@ def explain_block(window: ContextWindow, block_name: str) -> str:
 
 def _explain_included(window: ContextWindow, block: ContextBlock) -> str:
     """Explain an included block."""
-    lines: list[str] = []
+    lines: List[str] = []
     budget_pct = (
         f"{block.token_count / window.max_tokens * 100:.1f}%"
         if window.max_tokens > 0
@@ -102,7 +102,7 @@ def _explain_excluded(
     decision: BlockDecision,
 ) -> str:
     """Explain an excluded block."""
-    lines: list[str] = []
+    lines: List[str] = []
 
     lines.append(f'Block "{decision.block_name}" is EXCLUDED')
     lines.append(f"- Origin: {decision.origin_summary}")

@@ -8,7 +8,7 @@ or pipeline processing.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Dict
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,7 @@ class Origin(BaseModel):
 
     source: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    details: dict[str, Any] = Field(default_factory=dict)
+    details: Dict[str, Any] = Field(default_factory=dict)
 
     # Convenience properties for common detail fields
     @property

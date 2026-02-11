@@ -7,7 +7,7 @@ functions for trimming conversations without the full framework.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Dict, List
 
 from contextkit._tokens import count as count_tokens
 from contextkit.core import BlockType, ContextBlock
@@ -43,7 +43,7 @@ class ShortTermMemory:
         self._max_turns = max_turns
         self._max_tokens = max_tokens
         self._encoding = encoding
-        self._messages: list[dict[str, Any]] = []
+        self._messages: List[Dict[str, Any]] = []
         self._total_turns_added = 0
 
     @property
@@ -52,7 +52,7 @@ class ShortTermMemory:
         return self._strategy
 
     @property
-    def messages(self) -> list[dict[str, Any]]:
+    def messages(self) -> List[Dict[str, Any]]:
         """Current messages after trimming."""
         return list(self._messages)
 
@@ -77,7 +77,7 @@ class ShortTermMemory:
         self,
         role: str,
         content: str,
-        metadata: dict[str, Any] | None = None,
+        metadata: Dict[str, Any] | None = None,
     ) -> None:
         """Add a conversation turn.
 
@@ -86,7 +86,7 @@ class ShortTermMemory:
             content: Message content.
             metadata: Optional metadata for this turn.
         """
-        message: dict[str, Any] = {
+        message: Dict[str, Any] = {
             "role": role,
             "content": content,
         }
@@ -96,7 +96,7 @@ class ShortTermMemory:
         self._total_turns_added += 1
         self._apply_trimming()
 
-    def add_messages(self, messages: list[dict[str, Any]]) -> None:
+    def add_messages(self, messages: List[Dict[str, Any]]) -> None:
         """Add multiple messages at once.
 
         Args:
@@ -121,7 +121,7 @@ class ShortTermMemory:
         first_turn = self._total_turns_added - len(self._messages) + 1
         last_turn = self._total_turns_added
 
-        origin_details: dict[str, Any] = {
+        origin_details: Dict[str, Any] = {
             "turn_range": f"{first_turn}-{last_turn}",
             "strategy": self._strategy,
             "total_turns_seen": self._total_turns_added,
@@ -177,12 +177,12 @@ class ShortTermMemory:
 
 
 def trim_conversation(
-    messages: list[dict[str, Any]],
+    messages: List[Dict[str, Any]],
     strategy: str = "sliding_window",
     max_turns: int = 20,
     max_tokens: int | None = None,
     encoding: str = "cl100k_base",
-) -> list[dict[str, Any]]:
+) -> List[Dict[str, Any]]:
     """Standalone utility to trim a conversation without ShortTermMemory.
 
     Args:
