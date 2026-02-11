@@ -108,7 +108,7 @@ strict = true
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["tiktoken", "cachetools"]
+module = ["tiktoken", "cachetools", "aiosqlite"]
 ignore_missing_imports = true
 
 [tool.coverage.run]

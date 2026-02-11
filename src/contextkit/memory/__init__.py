@@ -11,12 +11,14 @@ from contextkit.memory.backends import (
 )
 from contextkit.memory.long_term import LongTermMemory
 from contextkit.memory.short_term import ShortTermMemory, trim_conversation
+from contextkit.memory.sqlite_backend import SQLiteBackend
 
 __all__ = [
     "InMemoryBackend",
     "LongTermMemory",
     "MemoryBackend",
     "MemoryRecord",
+    "SQLiteBackend",
     "ShortTermMemory",
     "trim_conversation",
 ]

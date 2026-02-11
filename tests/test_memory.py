@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import tempfile
 
 import pytest
 
 from contextkit.memory.backends import InMemoryBackend, MemoryRecord
 from contextkit.memory.long_term import LongTermMemory
 from contextkit.memory.short_term import ShortTermMemory, trim_conversation
+from contextkit.memory.sqlite_backend import SQLiteBackend
 
 
 class TestMemoryRecord:
@@ -247,3 +250,121 @@ class TestLongTermMemory:
         ltm = LongTermMemory(backend=backend)
         asyncio.run(ltm.store("k1", "test"))
         assert backend.record_count == 1
+
+
+class TestSQLiteBackend:
+    """Tests for the SQLiteBackend persistent memory storage."""
+
+    def _make_backend(self, tmp_path: str) -> SQLiteBackend:
+        """Create a backend with a temporary database file."""
+        db_path = os.path.join(tmp_path, "test_memory.db")
+        return SQLiteBackend(db_path=db_path)
+
+    def test_store_and_retrieve(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self._make_backend(tmp)
+            asyncio.run(backend.store("k1", "user likes Python"))
+            results = asyncio.run(backend.retrieve("Python"))
+            assert len(results) >= 1
+            assert results[0].key == "k1"
+            assert results[0].content == "user likes Python"
+
+    def test_store_with_metadata_and_tags(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self._make_backend(tmp)
+            record = asyncio.run(
+                backend.store(
+                    "k1",
+                    "content",
+                    metadata={"source": "user"},
+                    tags=["style"],
+                    importance=0.9,
+                )
+            )
+            assert record.key == "k1"
+            assert record.metadata == {"source": "user"}
+            assert record.tags == ["style"]
+            assert record.importance == 0.9
+
+    def test_retrieve_filters_by_tags(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self._make_backend(tmp)
+            asyncio.run(backend.store("k1", "content a", tags=["a"]))
+            asyncio.run(backend.store("k2", "content b", tags=["b"]))
+            results = asyncio.run(backend.retrieve("content", tags=["a"]))
+            assert len(results) == 1
+            assert results[0].key == "k1"
+
+    def test_retrieve_top_k(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self._make_backend(tmp)
+            for i in range(10):
+                asyncio.run(backend.store(f"k{i}", f"item number {i}"))
+            results = asyncio.run(backend.retrieve("item", top_k=3))
+            assert len(results) == 3
+
+    def test_delete(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self._make_backend(tmp)
+            asyncio.run(backend.store("k1", "content"))
+            assert asyncio.run(backend.delete("k1")) is True
+            assert asyncio.run(backend.delete("k1")) is False
+
+    def test_list_records(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self._make_backend(tmp)
+            asyncio.run(backend.store("k1", "a"))
+            asyncio.run(backend.store("k2", "b"))
+            records = asyncio.run(backend.list_records())
+            assert len(records) == 2
+
+    def test_list_records_with_tags(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self._make_backend(tmp)
+            asyncio.run(backend.store("k1", "a", tags=["x"]))
+            asyncio.run(backend.store("k2", "b", tags=["y"]))
+            records = asyncio.run(backend.list_records(tags=["x"]))
+            assert len(records) == 1
+            assert records[0].key == "k1"
+
+    def test_upsert_overwrites_existing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self._make_backend(tmp)
+            asyncio.run(backend.store("k1", "original"))
+            asyncio.run(backend.store("k1", "updated"))
+            records = asyncio.run(backend.list_records())
+            assert len(records) == 1
+            assert records[0].content == "updated"
+
+    def test_persistence_across_instances(self) -> None:
+        """Verify data persists when creating a new backend instance."""
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = os.path.join(tmp, "persist.db")
+            # Store with first instance
+            backend1 = SQLiteBackend(db_path=db_path)
+            asyncio.run(backend1.store("k1", "persistent data"))
+            # Retrieve with second instance
+            backend2 = SQLiteBackend(db_path=db_path)
+            results = asyncio.run(backend2.retrieve("persistent"))
+            assert len(results) == 1
+            assert results[0].content == "persistent data"
+
+    def test_record_count(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            backend = self._make_backend(tmp)
+            count = asyncio.run(backend.record_count)
+            assert count == 0
+            asyncio.run(backend.store("k1", "a"))
+            count = asyncio.run(backend.record_count)
+            assert count == 1
+
+    def test_with_long_term_memory(self) -> None:
+        """Verify SQLiteBackend works as LongTermMemory backend."""
+        with tempfile.TemporaryDirectory() as tmp:
+            db_path = os.path.join(tmp, "ltm.db")
+            backend = SQLiteBackend(db_path=db_path)
+            ltm = LongTermMemory(backend=backend)
+            asyncio.run(ltm.store("k1", "Python tips", tags=["code"]))
+            blocks = asyncio.run(ltm.retrieve_as_blocks("Python"))
+            assert len(blocks) >= 1
+            assert blocks[0].type.value == "long_term_memory"
