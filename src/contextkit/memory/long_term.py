@@ -9,6 +9,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from contextkit.constants import (
+    DEFAULT_IMPORTANCE,
+    DEFAULT_TOP_K,
+    PRIORITY_LONG_TERM_MEMORY,
+)
 from contextkit.core import BlockType, ContextBlock
 from contextkit.memory.backends import (
     InMemoryBackend,
@@ -46,7 +51,7 @@ class LongTermMemory:
         content: str,
         metadata: Dict[str, Any] | None = None,
         tags: List[str] | None = None,
-        importance: float = 0.5,
+        importance: float = DEFAULT_IMPORTANCE,
     ) -> MemoryRecord:
         """Store a memory record.
 
@@ -71,7 +76,7 @@ class LongTermMemory:
     async def retrieve(
         self,
         query: str,
-        top_k: int = 5,
+        top_k: int = DEFAULT_TOP_K,
         tags: List[str] | None = None,
     ) -> List[MemoryRecord]:
         """Retrieve memories matching a query.
@@ -89,9 +94,9 @@ class LongTermMemory:
     async def retrieve_as_blocks(
         self,
         query: str,
-        top_k: int = 5,
+        top_k: int = DEFAULT_TOP_K,
         tags: List[str] | None = None,
-        priority: int = 60,
+        priority: int = PRIORITY_LONG_TERM_MEMORY,
     ) -> List[ContextBlock]:
         """Retrieve memories and convert to ContextBlocks.
 

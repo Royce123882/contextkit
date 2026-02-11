@@ -10,9 +10,7 @@ from typing import Tuple
 
 from cachetools import LRUCache
 
-# Default cache size for token count results.
-# Keyed by (content_hash, encoding_name).
-DEFAULT_TOKEN_CACHE_SIZE = 4096
+from contextkit.constants import DEFAULT_TOKEN_CACHE_SIZE
 
 # Global token count cache shared across all callers.
 token_count_cache: LRUCache[Tuple[int, str], int] = LRUCache(

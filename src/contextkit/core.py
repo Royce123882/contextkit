@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 from contextkit._cache import clear_token_cache
 from contextkit._tokens import count as count_tokens
+from contextkit.constants import DEFAULT_ENCODING, PRIORITY_DEFAULT
 from contextkit.models import get_model
 from contextkit.observe.events import (
     BlockEventData,
@@ -61,7 +62,7 @@ class ContextBlock(BaseModel):
 
     type: BlockType
     content: str | List[Dict[str, Any]]
-    priority: int = 50
+    priority: int = PRIORITY_DEFAULT
     metadata: Dict[str, Any] = Field(default_factory=dict)
     name: str | None = None
     origin: Origin | None = None
@@ -72,7 +73,7 @@ class ContextBlock(BaseModel):
     @property
     def token_count(self) -> int:
         """Count tokens in this block's content using cached tokenizer."""
-        encoding = self.metadata.get("encoding", "cl100k_base")
+        encoding = self.metadata.get("encoding", DEFAULT_ENCODING)
         return count_tokens(self.content, encoding)
 
     @property
@@ -160,7 +161,7 @@ class ContextWindow:
         """Configure the window with manual token limits."""
         self._model_name = None
         self._max_tokens = max_tokens
-        self._encoding = "cl100k_base"
+        self._encoding = DEFAULT_ENCODING
         self._input_cost_per_mtok = 0.0
         self._output_cost_per_mtok = 0.0
 

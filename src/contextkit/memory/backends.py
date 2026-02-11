@@ -12,12 +12,13 @@ from typing import Any, Dict, List, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
+from contextkit.constants import (
+    DEFAULT_IMPORTANCE,
+    DEFAULT_TOP_K,
+    IMPORTANCE_WEIGHT,
+    WORD_MATCH_WEIGHT,
+)
 from contextkit.utils.text_similarity import word_overlap_score
-
-# Scoring weights for relevance ranking in retrieval.
-# Word match contributes 70%, record importance contributes 30%.
-_WORD_SCORE_WEIGHT = 0.7
-_IMPORTANCE_WEIGHT = 0.3
 
 
 class MemoryRecord(BaseModel):
@@ -37,7 +38,7 @@ class MemoryRecord(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
     tags: List[str] = Field(default_factory=list)
     stored_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    importance: float = 0.5
+    importance: float = DEFAULT_IMPORTANCE
 
 
 @runtime_checkable
@@ -55,7 +56,7 @@ class MemoryBackend(Protocol):
         content: str,
         metadata: Dict[str, Any] | None = None,
         tags: List[str] | None = None,
-        importance: float = 0.5,
+        importance: float = DEFAULT_IMPORTANCE,
     ) -> MemoryRecord:
         """Store a memory record.
 
@@ -74,7 +75,7 @@ class MemoryBackend(Protocol):
     async def retrieve(
         self,
         query: str,
-        top_k: int = 5,
+        top_k: int = DEFAULT_TOP_K,
         tags: List[str] | None = None,
     ) -> List[MemoryRecord]:
         """Retrieve records matching a query.
@@ -132,7 +133,7 @@ class InMemoryBackend:
         content: str,
         metadata: Dict[str, Any] | None = None,
         tags: List[str] | None = None,
-        importance: float = 0.5,
+        importance: float = DEFAULT_IMPORTANCE,
     ) -> MemoryRecord:
         """Store a record in the in-memory dict."""
         record = MemoryRecord(
@@ -148,7 +149,7 @@ class InMemoryBackend:
     async def retrieve(
         self,
         query: str,
-        top_k: int = 5,
+        top_k: int = DEFAULT_TOP_K,
         tags: List[str] | None = None,
     ) -> List[MemoryRecord]:
         """Retrieve records by keyword matching and importance."""
@@ -161,7 +162,7 @@ class InMemoryBackend:
 
         def relevance_score(rec: MemoryRecord) -> float:
             score = word_overlap_score(query, rec.content)
-            return score * _WORD_SCORE_WEIGHT + rec.importance * _IMPORTANCE_WEIGHT
+            return score * WORD_MATCH_WEIGHT + rec.importance * IMPORTANCE_WEIGHT
 
         results.sort(key=relevance_score, reverse=True)
         return results[:top_k]

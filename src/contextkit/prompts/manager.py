@@ -13,6 +13,7 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
+from contextkit.constants import PRIORITY_SYSTEM_PROMPT
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
 
@@ -125,7 +126,7 @@ class PromptManager:
         self,
         name: str,
         version: str | None = None,
-        priority: int = 100,
+        priority: int = PRIORITY_SYSTEM_PROMPT,
         **variables: Any,
     ) -> ContextBlock:
         """Render a template into a ContextBlock.
@@ -167,7 +168,7 @@ class PromptManager:
         base_name: str,
         override_name: str,
         separator: str = "\n\n",
-        priority: int = 100,
+        priority: int = PRIORITY_SYSTEM_PROMPT,
         **variables: Any,
     ) -> ContextBlock:
         """Compose two templates (base + override) into one block.

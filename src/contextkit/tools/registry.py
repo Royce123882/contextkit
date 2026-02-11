@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Tuple
 
 from pydantic import BaseModel, Field
 
+from contextkit.constants import PRIORITY_TOOL_DEFINITION, PRIORITY_TOOL_OUTPUT
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
 from contextkit.utils.text_similarity import word_overlap_score
@@ -50,7 +51,7 @@ class ToolOutput(BaseModel):
     latency_ms: float = 0.0
     called_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    def to_block(self, priority: int = 70) -> ContextBlock:
+    def to_block(self, priority: int = PRIORITY_TOOL_OUTPUT) -> ContextBlock:
         """Convert this output to a ContextBlock.
 
         Auto-populates Origin with tool name, call ID, and latency.
@@ -191,7 +192,7 @@ class ToolRegistry:
             block = ContextBlock(
                 type=BlockType.TOOL_DEFINITIONS,
                 content=json.dumps(tool_schema),
-                priority=60,
+                priority=PRIORITY_TOOL_DEFINITION,
                 name=f"tool_{tool.name}",
                 origin=origin,
             )
@@ -199,7 +200,7 @@ class ToolRegistry:
 
         return blocks
 
-    def to_block(self, priority: int = 60) -> ContextBlock:
+    def to_block(self, priority: int = PRIORITY_TOOL_DEFINITION) -> ContextBlock:
         """Convert all tools to a single ContextBlock.
 
         Creates a block containing all tool definitions as a list.

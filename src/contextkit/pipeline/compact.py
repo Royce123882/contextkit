@@ -9,6 +9,10 @@ from collections.abc import Callable
 from typing import List
 
 from contextkit._tokens import count as count_tokens
+from contextkit.constants import (
+    DEFAULT_COMPACT_MIN_TOKENS,
+    DEFAULT_COMPACT_TARGET_RATIO,
+)
 from contextkit.core import ContextBlock
 from contextkit.observe.provenance import Mutation
 from contextkit.pipeline.base import PipelineStep
@@ -31,8 +35,8 @@ class CompactStep(PipelineStep):
     def __init__(
         self,
         compactor: Callable[[str], str] | None = None,
-        target_ratio: float = 0.5,
-        min_tokens: int = 100,
+        target_ratio: float = DEFAULT_COMPACT_TARGET_RATIO,
+        min_tokens: int = DEFAULT_COMPACT_MIN_TOKENS,
     ) -> None:
         self._compactor = compactor or self._default_compactor
         self._target_ratio = target_ratio

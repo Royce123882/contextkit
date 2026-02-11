@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from contextkit.constants import PRIORITY_HANDOFF_METADATA
 from contextkit.core import (
     BlockType,
     BudgetExceededError,
@@ -68,7 +69,7 @@ class Scratchpad:
         """List all note keys."""
         return sorted(self._notes.keys())
 
-    def to_block(self, priority: int = 40) -> ContextBlock:
+    def to_block(self, priority: int = PRIORITY_HANDOFF_METADATA) -> ContextBlock:
         """Convert all notes to a ContextBlock.
 
         Args:

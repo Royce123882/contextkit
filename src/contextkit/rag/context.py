@@ -10,6 +10,12 @@ from __future__ import annotations
 from typing import List
 
 from contextkit._tokens import count as count_tokens
+from contextkit.constants import (
+    DEFAULT_ENCODING,
+    DEFAULT_SIMILARITY_THRESHOLD,
+    DEFAULT_TOP_K,
+    PRIORITY_RAG_CHUNK,
+)
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
 from contextkit.rag.backends import Chunk, RetrieverBackend
@@ -40,11 +46,11 @@ class RAGContext:
     async def retrieve(
         self,
         query: str,
-        top_k: int = 5,
+        top_k: int = DEFAULT_TOP_K,
         max_tokens: int | None = None,
         min_relevance: float = 0.0,
-        encoding: str = "cl100k_base",
-        priority: int = 70,
+        encoding: str = DEFAULT_ENCODING,
+        priority: int = PRIORITY_RAG_CHUNK,
     ) -> List[ContextBlock]:
         """Retrieve chunks and convert to ContextBlocks.
 
@@ -114,7 +120,7 @@ class RAGContext:
 
 def _deduplicate_chunks(
     chunks: List[Chunk],
-    similarity_threshold: float = 0.8,
+    similarity_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
 ) -> List[Chunk]:
     """Remove near-duplicate chunks based on content overlap.
 

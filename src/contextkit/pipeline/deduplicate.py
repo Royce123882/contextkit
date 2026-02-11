@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import List
 
+from contextkit.constants import DEFAULT_SIMILARITY_THRESHOLD
 from contextkit.core import ContextBlock
 from contextkit.observe.provenance import Mutation
 from contextkit.pipeline.base import PipelineStep
@@ -24,7 +25,9 @@ class DeduplicateStep(PipelineStep):
         similarity_threshold: Overlap threshold (0.0-1.0).
     """
 
-    def __init__(self, similarity_threshold: float = 0.8) -> None:
+    def __init__(
+        self, similarity_threshold: float = DEFAULT_SIMILARITY_THRESHOLD
+    ) -> None:
         self._threshold = similarity_threshold
 
     @property

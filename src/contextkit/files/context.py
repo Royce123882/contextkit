@@ -14,6 +14,7 @@ from typing import List, Tuple
 from pydantic import BaseModel
 
 from contextkit._tokens import count as count_tokens
+from contextkit.constants import DEFAULT_ENCODING, DEFAULT_TOP_K, PRIORITY_FILE_CONTEXT
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
 
@@ -99,7 +100,7 @@ class FileContext:
 
         return list(self._index)
 
-    def search(self, query: str, top_k: int = 5) -> List[FileReference]:
+    def search(self, query: str, top_k: int = DEFAULT_TOP_K) -> List[FileReference]:
         """Search indexed files by name or path substring.
 
         Args:
@@ -136,8 +137,8 @@ class FileContext:
         self,
         refs: List[FileReference],
         max_tokens: int | None = None,
-        encoding: str = "cl100k_base",
-        priority: int = 60,
+        encoding: str = DEFAULT_ENCODING,
+        priority: int = PRIORITY_FILE_CONTEXT,
     ) -> List[ContextBlock]:
         """Load files into ContextBlocks.
 
@@ -204,7 +205,7 @@ class FileContext:
     def load_single(
         self,
         path: str,
-        priority: int = 60,
+        priority: int = PRIORITY_FILE_CONTEXT,
     ) -> ContextBlock:
         """Load a single file into a ContextBlock.
 

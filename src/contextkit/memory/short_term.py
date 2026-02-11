@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from contextkit._tokens import count as count_tokens
+from contextkit.constants import DEFAULT_ENCODING, PRIORITY_SHORT_TERM_MEMORY
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
 
@@ -33,7 +34,7 @@ class ShortTermMemory:
         strategy: str = "sliding_window",
         max_turns: int = 20,
         max_tokens: int | None = None,
-        encoding: str = "cl100k_base",
+        encoding: str = DEFAULT_ENCODING,
     ) -> None:
         if strategy not in ("sliding_window", "token_budget"):
             raise ValueError(
@@ -133,7 +134,7 @@ class ShortTermMemory:
         return ContextBlock(
             type=BlockType.SHORT_TERM_MEMORY,
             content=list(self._messages),
-            priority=80,
+            priority=PRIORITY_SHORT_TERM_MEMORY,
             name=name,
             origin=Origin(
                 source="conversation",
@@ -181,7 +182,7 @@ def trim_conversation(
     strategy: str = "sliding_window",
     max_turns: int = 20,
     max_tokens: int | None = None,
-    encoding: str = "cl100k_base",
+    encoding: str = DEFAULT_ENCODING,
 ) -> List[Dict[str, Any]]:
     """Standalone utility to trim a conversation without ShortTermMemory.
 

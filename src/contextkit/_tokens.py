@@ -13,15 +13,13 @@ import logging
 from typing import Any, Dict, List
 
 from contextkit._cache import token_count_cache
+from contextkit.constants import (
+    CHARS_PER_TOKEN_ESTIMATE,
+    DEFAULT_ENCODING,
+    MESSAGE_OVERHEAD_TOKENS,
+)
 
 logger = logging.getLogger("contextkit")
-
-# Per-message overhead for chat-style tokenization.
-# OpenAI models add ~4 tokens per message for role/delimiters.
-_MESSAGE_OVERHEAD = 4
-
-# Average characters per token used for fallback estimation.
-_CHARS_PER_TOKEN_ESTIMATE = 4
 
 
 def _content_hash(content: str) -> int:
@@ -42,7 +40,7 @@ def _get_encoder(encoding: str) -> Any:
 
 def count(
     content: str | List[Dict[str, Any]],
-    encoding: str = "cl100k_base",
+    encoding: str = DEFAULT_ENCODING,
 ) -> int:
     """Count the number of tokens in content.
 
@@ -74,7 +72,7 @@ def _count_string(text: str, encoding: str) -> int:
         result = len(enc.encode(text))
     else:
         # Fallback: estimate based on character count
-        result = max(1, len(text) // _CHARS_PER_TOKEN_ESTIMATE)
+        result = max(1, len(text) // CHARS_PER_TOKEN_ESTIMATE)
 
     token_count_cache[cache_key] = result
     return result
@@ -91,14 +89,14 @@ def _count_messages(messages: List[Dict[str, Any]], encoding: str) -> int:
         msg_content = message.get("content", "")
         if isinstance(msg_content, str):
             total += _count_string(msg_content, encoding)
-        total += _MESSAGE_OVERHEAD  # role + delimiters
+        total += MESSAGE_OVERHEAD_TOKENS  # role + delimiters
     return total
 
 
 def fits_budget(
     content: str | List[Dict[str, Any]],
     max_tokens: int,
-    encoding: str = "cl100k_base",
+    encoding: str = DEFAULT_ENCODING,
 ) -> bool:
     """Check whether content fits within a token budget.
 

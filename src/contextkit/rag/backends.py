@@ -10,11 +10,8 @@ from typing import Any, Dict, List, Protocol, Tuple, runtime_checkable
 
 from pydantic import BaseModel, Field
 
+from contextkit.constants import DEFAULT_TOP_K, IMPORTANCE_WEIGHT, WORD_MATCH_WEIGHT
 from contextkit.utils.text_similarity import word_overlap_score
-
-# Scoring weights for combining keyword match and relevance.
-_QUERY_MATCH_WEIGHT = 0.7
-_RELEVANCE_WEIGHT = 0.3
 
 
 class Chunk(BaseModel):
@@ -45,7 +42,7 @@ class RetrieverBackend(Protocol):
     async def retrieve(
         self,
         query: str,
-        top_k: int = 5,
+        top_k: int = DEFAULT_TOP_K,
     ) -> List[Chunk]:
         """Retrieve chunks matching a query.
 
@@ -88,15 +85,15 @@ class InMemoryRetriever:
     async def retrieve(
         self,
         query: str,
-        top_k: int = 5,
+        top_k: int = DEFAULT_TOP_K,
     ) -> List[Chunk]:
         """Retrieve chunks matching the query by keyword overlap."""
         scored: List[Tuple[float, Chunk]] = []
         for chunk in self._chunks:
             keyword_score = word_overlap_score(query, chunk.content)
             final_score = (
-                keyword_score * _QUERY_MATCH_WEIGHT
-                + chunk.relevance_score * _RELEVANCE_WEIGHT
+                keyword_score * WORD_MATCH_WEIGHT
+                + chunk.relevance_score * IMPORTANCE_WEIGHT
             )
             scored.append((final_score, chunk))
 

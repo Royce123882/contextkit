@@ -12,6 +12,12 @@ from typing import Any, Dict, List, Tuple
 from pydantic import BaseModel, Field
 
 from contextkit._tokens import count as count_tokens
+from contextkit.constants import (
+    DEFAULT_ENCODING,
+    DEFAULT_EXAMPLE_CANDIDATE_LIMIT,
+    DEFAULT_EXAMPLE_TOP_K,
+    PRIORITY_EXAMPLE,
+)
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
 from contextkit.utils.text_similarity import word_overlap_score
@@ -100,7 +106,7 @@ class ExampleStore:
     def select(
         self,
         input_text: str,
-        top_k: int = 3,
+        top_k: int = DEFAULT_EXAMPLE_TOP_K,
         tags: List[str] | None = None,
     ) -> List[Tuple[Example, float]]:
         """Select examples most similar to the given input.
@@ -132,10 +138,10 @@ class ExampleStore:
         self,
         input_text: str,
         max_tokens: int,
-        top_k: int = 10,
+        top_k: int = DEFAULT_EXAMPLE_CANDIDATE_LIMIT,
         tags: List[str] | None = None,
-        encoding: str = "cl100k_base",
-        priority: int = 55,
+        encoding: str = DEFAULT_ENCODING,
+        priority: int = PRIORITY_EXAMPLE,
     ) -> List[ContextBlock]:
         """Select best examples that fit within a token budget.
 
