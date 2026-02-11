@@ -54,51 +54,81 @@ class BudgetMonitor:
             return []
 
         usage_fraction = token_count / max_tokens
+        self._reset_thresholds_below(usage_fraction)
+
         fired_this_check: list[float] = []
-
-        # Reset thresholds that usage has dropped below
-        thresholds_to_reset = {t for t in self._fired if usage_fraction < t}
-        self._fired -= thresholds_to_reset
-
-        # Fire thresholds that have been crossed
         for threshold in self.thresholds:
             if usage_fraction >= threshold and threshold not in self._fired:
                 self._fired.add(threshold)
                 fired_this_check.append(threshold)
-
-                percent = usage_fraction * 100
-                threshold_percent = threshold * 100
-
-                # Log through Python logging
-                msg = (
-                    f"budget at {percent:.0f}% "
-                    f"({token_count:,} / {max_tokens:,} tokens)"
-                )
-                if largest_block_name:
-                    block_share = (
-                        (largest_block_tokens / max_tokens * 100)
-                        if max_tokens > 0
-                        else 0
-                    )
-                    msg += (
-                        f" | largest block: {largest_block_name} "
-                        f"({largest_block_tokens:,} tokens, "
-                        f"{block_share:.0f}% of total)"
-                    )
-                logger.warning("[contextkit] WARNING: %s", msg)
-
-                # Emit event
-                emit(
-                    BudgetEventData(
-                        event=ContextEvent.BUDGET_WARNING,
-                        percent=percent,
-                        threshold=threshold_percent,
-                        tokens_used=token_count,
-                        tokens_max=max_tokens,
-                    )
+                self._fire_warning(
+                    usage_fraction,
+                    threshold,
+                    token_count,
+                    max_tokens,
+                    largest_block_name,
+                    largest_block_tokens,
                 )
 
         return fired_this_check
+
+    def _reset_thresholds_below(self, usage_fraction: float) -> None:
+        """Reset thresholds that usage has dropped below."""
+        thresholds_to_reset = {t for t in self._fired if usage_fraction < t}
+        self._fired -= thresholds_to_reset
+
+    @staticmethod
+    def _format_warning_message(
+        usage_fraction: float,
+        token_count: int,
+        max_tokens: int,
+        largest_block_name: str | None,
+        largest_block_tokens: int,
+    ) -> str:
+        """Format a human-readable budget warning message."""
+        percent = usage_fraction * 100
+        msg = f"budget at {percent:.0f}% ({token_count:,} / {max_tokens:,} tokens)"
+        if largest_block_name:
+            block_share = (
+                (largest_block_tokens / max_tokens * 100) if max_tokens > 0 else 0
+            )
+            msg += (
+                f" | largest block: {largest_block_name} "
+                f"({largest_block_tokens:,} tokens, "
+                f"{block_share:.0f}% of total)"
+            )
+        return msg
+
+    @staticmethod
+    def _fire_warning(
+        usage_fraction: float,
+        threshold: float,
+        token_count: int,
+        max_tokens: int,
+        largest_block_name: str | None,
+        largest_block_tokens: int,
+    ) -> None:
+        """Log a warning and emit a BUDGET_WARNING event."""
+        msg = BudgetMonitor._format_warning_message(
+            usage_fraction,
+            token_count,
+            max_tokens,
+            largest_block_name,
+            largest_block_tokens,
+        )
+        logger.warning("[contextkit] WARNING: %s", msg)
+
+        percent = usage_fraction * 100
+        threshold_percent = threshold * 100
+        emit(
+            BudgetEventData(
+                event=ContextEvent.BUDGET_WARNING,
+                percent=percent,
+                threshold=threshold_percent,
+                tokens_used=token_count,
+                tokens_max=max_tokens,
+            )
+        )
 
     def reset(self) -> None:
         """Reset all fired thresholds."""

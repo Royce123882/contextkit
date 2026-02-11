@@ -7,7 +7,7 @@ for scripts, notebooks, and non-async codebases.
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import Any, cast
 
 from contextkit.core import ContextBlock
 from contextkit.memory.backends import (
@@ -58,14 +58,17 @@ class LongTermMemory:
         importance: float = 0.5,
     ) -> MemoryRecord:
         """Store a memory record (sync)."""
-        return _run_sync(
-            self._async.store(
-                key=key,
-                content=content,
-                metadata=metadata,
-                tags=tags,
-                importance=importance,
-            )
+        return cast(
+            MemoryRecord,
+            _run_sync(
+                self._async.store(
+                    key=key,
+                    content=content,
+                    metadata=metadata,
+                    tags=tags,
+                    importance=importance,
+                )
+            ),
         )
 
     def retrieve(
@@ -75,7 +78,10 @@ class LongTermMemory:
         tags: list[str] | None = None,
     ) -> list[MemoryRecord]:
         """Retrieve matching records (sync)."""
-        return _run_sync(self._async.retrieve(query=query, top_k=top_k, tags=tags))
+        return cast(
+            list[MemoryRecord],
+            _run_sync(self._async.retrieve(query=query, top_k=top_k, tags=tags)),
+        )
 
     def retrieve_as_blocks(
         self,
@@ -85,19 +91,25 @@ class LongTermMemory:
         priority: int = 60,
     ) -> list[ContextBlock]:
         """Retrieve as ContextBlocks (sync)."""
-        return _run_sync(
-            self._async.retrieve_as_blocks(
-                query=query,
-                top_k=top_k,
-                tags=tags,
-                priority=priority,
-            )
+        return cast(
+            list[ContextBlock],
+            _run_sync(
+                self._async.retrieve_as_blocks(
+                    query=query,
+                    top_k=top_k,
+                    tags=tags,
+                    priority=priority,
+                )
+            ),
         )
 
     def delete(self, key: str) -> bool:
         """Delete a record by key (sync)."""
-        return _run_sync(self._async.delete(key))
+        return cast(bool, _run_sync(self._async.delete(key)))
 
     def list_records(self, tags: list[str] | None = None) -> list[MemoryRecord]:
         """List all records (sync)."""
-        return _run_sync(self._async.list_records(tags=tags))
+        return cast(
+            list[MemoryRecord],
+            _run_sync(self._async.list_records(tags=tags)),
+        )

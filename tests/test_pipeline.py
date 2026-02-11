@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from contextkit.core import BlockType, ContextBlock, ContextWindow
 from contextkit.observe.provenance import Origin
-from contextkit.pipeline.steps import (
+from contextkit.pipeline import (
     CompactStep,
     ContextPipeline,
     DeduplicateStep,

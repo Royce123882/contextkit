@@ -7,7 +7,7 @@ Supports both text output (terminals) and HTML (Jupyter notebooks).
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from contextkit.observe.renderers import (
     format_text_table,
@@ -15,7 +15,7 @@ from contextkit.observe.renderers import (
 )
 
 if TYPE_CHECKING:
-    from contextkit.core import ContextWindow
+    from contextkit.core import ContextBlock, ContextWindow
 
 
 def _preview(content: object) -> str:
@@ -45,13 +45,34 @@ def inspect_window(
     return _inspect_summary(window, format)
 
 
+# ---------------------------------------------------------------------------
+# Summary table helpers
+# ---------------------------------------------------------------------------
+
+
 def _inspect_summary(window: ContextWindow, format: str) -> str:
     """Render a summary table of all blocks in the window."""
-    headers = ["Block", "Type", "Tokens", "Priority", "Budget %", "Origin"]
+    has_model = bool(window.model_name)
+    headers = _build_summary_headers(has_model)
+    rows = _build_summary_rows(window, has_model)
+    footer_row = _build_summary_footer(window, has_model)
 
-    if window.model_name:
-        headers.insert(4, "Cost")
+    result = format_text_table(headers, rows, footer=footer_row)
+    result += _format_budget_remaining(window)
+    return result
 
+
+def _build_summary_headers(has_model: bool) -> list[str]:
+    """Build the header row for the summary table."""
+    headers = ["Block", "Type", "Tokens", "Priority"]
+    if has_model:
+        headers.append("Cost")
+    headers.extend(["Budget %", "Origin"])
+    return headers
+
+
+def _build_summary_rows(window: ContextWindow, has_model: bool) -> list[list[str]]:
+    """Build data rows for the summary table."""
     rows: list[list[str]] = []
     for block in window.blocks:
         budget_pct = (
@@ -68,21 +89,25 @@ def _inspect_summary(window: ContextWindow, format: str) -> str:
             str(block.priority),
         ]
 
-        if window.model_name:
+        if has_model:
             cost = block.token_count * window._input_cost_per_mtok / 1_000_000
             row.append(f"${cost:.4f}")
 
         row.extend([budget_pct, origin_str])
         rows.append(row)
 
-    # Footer with totals
+    return rows
+
+
+def _build_summary_footer(window: ContextWindow, has_model: bool) -> list[str]:
+    """Build the footer row with totals for the summary table."""
     footer_row: list[str] = [
         "Total",
         "",
         f"{window.token_count:,}",
         "",
     ]
-    if window.model_name:
+    if has_model:
         footer_row.append(f"${window.cost_estimate:.4f}")
 
     budget_pct_total = (
@@ -91,113 +116,145 @@ def _inspect_summary(window: ContextWindow, format: str) -> str:
         else "N/A"
     )
     footer_row.extend([budget_pct_total, ""])
+    return footer_row
 
-    result = format_text_table(headers, rows, footer=footer_row)
 
-    # Add budget remaining line
-    result += (
+def _format_budget_remaining(window: ContextWindow) -> str:
+    """Format the budget-remaining line appended to the summary."""
+    if window.max_tokens <= 0:
+        return ""
+    return (
         f"\nBudget remaining: {window.budget_remaining:,} tokens "
         f"({window.budget_remaining / window.max_tokens * 100:.1f}%)"
-        if window.max_tokens > 0
-        else ""
     )
 
-    return result
+
+# ---------------------------------------------------------------------------
+# Block drill-down helpers
+# ---------------------------------------------------------------------------
 
 
 def _inspect_block(window: ContextWindow, block_name: str, format: str) -> str:
     """Drill into a specific block for detailed inspection."""
-    from contextkit.core import BlockType
-
     block = window.get_block(block_name)
     if block is None:
         return f"No block with name '{block_name}' found."
 
-    lines: list[str] = [
+    lines = _build_block_header(block)
+    lines += _build_mutation_lines(block)
+    lines += _build_type_specific_details(block)
+
+    return "\n".join(lines)
+
+
+def _build_block_header(block: ContextBlock) -> list[str]:
+    """Build the header lines for a block inspection."""
+    lines = [
         f"Block: {block.display_name}",
         f"Type: {block.type.value}",
         f"Tokens: {block.token_count:,}",
         f"Priority: {block.priority}",
     ]
-
     if block.origin:
         lines.append(f"Origin: {block.origin.summary()}")
+    return lines
 
-    if block.mutations:
-        lines.append("Mutations:")
-        for mutation in block.mutations:
-            lines.append(
-                f"  [{mutation.step}] {mutation.action}: "
-                f"{mutation.detail} "
-                f"({mutation.tokens_before:,} -> "
-                f"{mutation.tokens_after:,} tokens)"
-            )
 
-    # Type-specific drill-down
+def _build_mutation_lines(block: ContextBlock) -> list[str]:
+    """Build mutation history lines for a block."""
+    if not block.mutations:
+        return []
+
+    lines: list[str] = ["Mutations:"]
+    for mutation in block.mutations:
+        lines.append(
+            f"  [{mutation.step}] {mutation.action}: "
+            f"{mutation.detail} "
+            f"({mutation.tokens_before:,} -> "
+            f"{mutation.tokens_after:,} tokens)"
+        )
+    return lines
+
+
+def _build_type_specific_details(block: ContextBlock) -> list[str]:
+    """Build type-specific drill-down details for a block."""
+    from contextkit.core import BlockType
+
     if block.type == BlockType.SHORT_TERM_MEMORY and isinstance(block.content, list):
-        lines.append("")
-        lines.append("Messages:")
-        headers = ["#", "Role", "Tokens", "Content"]
-        rows = []
-        for i, msg in enumerate(block.content, 1):
-            content = msg.get("content", "")
-            from contextkit._tokens import count
+        return _inspect_messages_table(block.content)
 
-            msg_tokens = count(content) if isinstance(content, str) else 0
-            rows.append(
-                [
-                    str(i),
-                    msg.get("role", "unknown"),
-                    str(msg_tokens),
-                    _preview(content),
-                ]
-            )
-        lines.append(format_text_table(headers, rows))
+    if block.type == BlockType.RAG and isinstance(block.content, list):
+        return _inspect_chunks_table(block.content)
 
-    elif block.type == BlockType.RAG and isinstance(block.content, list):
-        lines.append("")
-        lines.append("Chunks:")
-        headers = ["#", "Source", "Tokens", "Relevance", "Content"]
-        rows = []
-        for i, chunk in enumerate(block.content, 1):
-            content = chunk.get("content", "")
-            from contextkit._tokens import count
+    if block.type == BlockType.TOOL_DEFINITIONS and isinstance(block.content, list):
+        return _inspect_tools_table(block.content)
 
-            chunk_tokens = count(content) if isinstance(content, str) else 0
-            source = chunk.get("source", "-")
-            relevance = chunk.get("relevance", "-")
-            rows.append(
-                [
-                    str(i),
-                    str(source),
-                    str(chunk_tokens),
-                    str(relevance),
-                    _preview(content),
-                ]
-            )
-        lines.append(format_text_table(headers, rows))
+    if isinstance(block.content, str):
+        return [
+            "",
+            "Content:",
+            truncate_content(block.content, max_length=200),
+        ]
 
-    elif block.type == BlockType.TOOL_DEFINITIONS and isinstance(block.content, list):
-        lines.append("")
-        lines.append("Tools:")
-        headers = ["#", "Name", "Description", "Params"]
-        rows = []
-        for i, tool in enumerate(block.content, 1):
-            name = tool.get("name", "-")
-            desc = tool.get("description", "-")
-            params = tool.get("parameters", {})
-            param_count = (
-                len(params.get("properties", {})) if isinstance(params, dict) else 0
-            )
-            rows.append([str(i), name, truncate_content(desc), str(param_count)])
-        lines.append(format_text_table(headers, rows))
+    return []
 
-    elif isinstance(block.content, str):
-        lines.append("")
-        lines.append("Content:")
-        lines.append(truncate_content(block.content, max_length=200))
 
-    return "\n".join(lines)
+def _inspect_messages_table(messages: list[dict[str, Any]]) -> list[str]:
+    """Build a table of conversation messages for SHORT_TERM_MEMORY."""
+    from contextkit._tokens import count
+
+    headers = ["#", "Role", "Tokens", "Content"]
+    rows = []
+    for i, msg in enumerate(messages, 1):
+        content = msg.get("content", "")
+        msg_tokens = count(content) if isinstance(content, str) else 0
+        rows.append(
+            [
+                str(i),
+                msg.get("role", "unknown"),
+                str(msg_tokens),
+                _preview(content),
+            ]
+        )
+    return ["", "Messages:", format_text_table(headers, rows)]
+
+
+def _inspect_chunks_table(chunks: list[dict[str, Any]]) -> list[str]:
+    """Build a table of RAG chunks for RAG blocks."""
+    from contextkit._tokens import count
+
+    headers = ["#", "Source", "Tokens", "Relevance", "Content"]
+    rows = []
+    for i, chunk in enumerate(chunks, 1):
+        content = chunk.get("content", "")
+        chunk_tokens = count(content) if isinstance(content, str) else 0
+        source = chunk.get("source", "-")
+        relevance = chunk.get("relevance", "-")
+        rows.append(
+            [
+                str(i),
+                str(source),
+                str(chunk_tokens),
+                str(relevance),
+                _preview(content),
+            ]
+        )
+    return ["", "Chunks:", format_text_table(headers, rows)]
+
+
+def _inspect_tools_table(tools: list[dict[str, Any]]) -> list[str]:
+    """Build a table of tool definitions for TOOL_DEFINITIONS blocks."""
+    headers = ["#", "Name", "Description", "Params"]
+    rows = []
+    for i, tool in enumerate(tools, 1):
+        tool_name = tool.get("name", "-")
+        desc = tool.get("description", "-")
+        params = tool.get("parameters", {})
+        param_count = (
+            len(params.get("properties", {})) if isinstance(params, dict) else 0
+        )
+        rows.append([str(i), tool_name, truncate_content(desc), str(param_count)])
+    return ["", "Tools:", format_text_table(headers, rows)]
 
 
 def dump_window(window: ContextWindow, path: str) -> None:

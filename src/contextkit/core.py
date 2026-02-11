@@ -131,19 +131,11 @@ class ContextWindow:
         max_tokens: int | None = None,
         budget_warnings: list[float] | None = None,
     ) -> None:
+        self._model_name: str | None = None
         if model is not None:
-            spec = get_model(model)
-            self._model_name = model
-            self._max_tokens = spec.max_context
-            self._encoding = spec.encoding
-            self._input_cost_per_mtok = spec.input_cost_per_mtok
-            self._output_cost_per_mtok = spec.output_cost_per_mtok
+            self._init_from_model(model)
         elif max_tokens is not None:
-            self._model_name: str | None = None
-            self._max_tokens = max_tokens
-            self._encoding = "cl100k_base"
-            self._input_cost_per_mtok = 0.0
-            self._output_cost_per_mtok = 0.0
+            self._init_with_manual_tokens(max_tokens)
         else:
             raise ValueError("Either 'model' or 'max_tokens' must be provided.")
 
@@ -154,6 +146,23 @@ class ContextWindow:
         self._budget_monitor: BudgetMonitor | None = None
         if budget_warnings:
             self._budget_monitor = BudgetMonitor(budget_warnings)
+
+    def _init_from_model(self, model: str) -> None:
+        """Configure the window from a registered model spec."""
+        spec = get_model(model)
+        self._model_name = model
+        self._max_tokens = spec.max_context
+        self._encoding = spec.encoding
+        self._input_cost_per_mtok = spec.input_cost_per_mtok
+        self._output_cost_per_mtok = spec.output_cost_per_mtok
+
+    def _init_with_manual_tokens(self, max_tokens: int) -> None:
+        """Configure the window with manual token limits."""
+        self._model_name = None
+        self._max_tokens = max_tokens
+        self._encoding = "cl100k_base"
+        self._input_cost_per_mtok = 0.0
+        self._output_cost_per_mtok = 0.0
 
     @property
     def model_name(self) -> str | None:
@@ -218,39 +227,11 @@ class ContextWindow:
         """
         block_tokens = block.token_count
         if self.token_count + block_tokens > self._max_tokens:
-            # Emit BUDGET_EXCEEDED event
-            emit(
-                BudgetEventData(
-                    event=ContextEvent.BUDGET_EXCEEDED,
-                    tokens_used=self.token_count,
-                    tokens_max=self._max_tokens,
-                    details={
-                        "block_name": block.display_name,
-                        "block_tokens": block_tokens,
-                    },
-                )
-            )
-            raise BudgetExceededError(
-                block_name=block.display_name,
-                block_tokens=block_tokens,
-                budget_remaining=self.budget_remaining,
-                max_tokens=self._max_tokens,
-            )
+            self._raise_budget_exceeded(block, block_tokens)
 
         self._blocks.append(block)
         self._invalidate_cache()
-
-        # Emit BLOCK_ADDED event
-        emit(
-            BlockEventData(
-                event=ContextEvent.BLOCK_ADDED,
-                block_name=block.display_name,
-                block_type=block.type.value,
-                token_count=block_tokens,
-            )
-        )
-
-        # Check budget warnings
+        self._emit_block_added_event(block)
         self._check_budget_warnings()
 
     def remove(self, name: str) -> None:
@@ -321,24 +302,26 @@ class ContextWindow:
             "token_count": self.token_count,
             "budget_remaining": self.budget_remaining,
             "cost_estimate": self.cost_estimate,
-            "blocks": [
-                {
-                    "name": b.display_name,
-                    "type": b.type.value,
-                    "priority": b.priority,
-                    "token_count": b.token_count,
-                    "content": b.content,
-                    "metadata": b.metadata,
-                    "origin": (b.origin.model_dump(mode="json") if b.origin else None),
-                    "mutations": [m.model_dump(mode="json") for m in b.mutations],
-                }
-                for b in self._blocks
-            ],
+            "blocks": [self._serialize_block(b) for b in self._blocks],
             "assembly_report": (
                 self._assembly_report.model_dump(mode="json")
                 if self._assembly_report
                 else None
             ),
+        }
+
+    @staticmethod
+    def _serialize_block(block: ContextBlock) -> dict[str, Any]:
+        """Serialize a single block to a dict for JSON output."""
+        return {
+            "name": block.display_name,
+            "type": block.type.value,
+            "priority": block.priority,
+            "token_count": block.token_count,
+            "content": block.content,
+            "metadata": block.metadata,
+            "origin": (block.origin.model_dump(mode="json") if block.origin else None),
+            "mutations": [m.model_dump(mode="json") for m in block.mutations],
         }
 
     def inspect(
@@ -428,21 +411,28 @@ class ContextWindow:
         if self._budget_monitor is None:
             return
 
-        # Find the largest block for the warning message
-        largest_name: str | None = None
-        largest_tokens = 0
-        for block in self._blocks:
-            tc = block.token_count
-            if tc > largest_tokens:
-                largest_tokens = tc
-                largest_name = block.display_name
-
+        largest_name, largest_tokens = self._find_largest_block()
         self._budget_monitor.check(
             token_count=self.token_count,
             max_tokens=self._max_tokens,
             largest_block_name=largest_name,
             largest_block_tokens=largest_tokens,
         )
+
+    def _find_largest_block(self) -> tuple[str | None, int]:
+        """Find the block with the most tokens.
+
+        Returns:
+            A tuple of (block_name, token_count) for the largest block.
+        """
+        largest_name: str | None = None
+        largest_tokens = 0
+        for block in self._blocks:
+            block_tokens = block.token_count
+            if block_tokens > largest_tokens:
+                largest_tokens = block_tokens
+                largest_name = block.display_name
+        return largest_name, largest_tokens
 
     @property
     def assembly_report(self) -> Any:
@@ -470,7 +460,30 @@ class ContextWindow:
         """
         self._blocks.append(block)
         self._invalidate_cache()
+        self._emit_block_added_event(block)
 
+    def _raise_budget_exceeded(self, block: ContextBlock, block_tokens: int) -> None:
+        """Emit a BUDGET_EXCEEDED event and raise BudgetExceededError."""
+        emit(
+            BudgetEventData(
+                event=ContextEvent.BUDGET_EXCEEDED,
+                tokens_used=self.token_count,
+                tokens_max=self._max_tokens,
+                details={
+                    "block_name": block.display_name,
+                    "block_tokens": block_tokens,
+                },
+            )
+        )
+        raise BudgetExceededError(
+            block_name=block.display_name,
+            block_tokens=block_tokens,
+            budget_remaining=self.budget_remaining,
+            max_tokens=self._max_tokens,
+        )
+
+    def _emit_block_added_event(self, block: ContextBlock) -> None:
+        """Emit a BLOCK_ADDED event for the given block."""
         emit(
             BlockEventData(
                 event=ContextEvent.BLOCK_ADDED,

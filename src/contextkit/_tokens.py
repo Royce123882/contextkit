@@ -65,7 +65,7 @@ def count(
 def _count_string(text: str, encoding: str) -> int:
     """Count tokens in a plain string, using cache."""
     cache_key = (_content_hash(text), encoding)
-    cached = token_count_cache.get(cache_key)
+    cached: int | None = token_count_cache.get(cache_key)
     if cached is not None:
         return cached
 

@@ -80,38 +80,62 @@ class ContextAssembler:
             The ContextWindow with assembled blocks.
         """
         sorted_blocks = sorted(blocks, key=lambda b: b.priority, reverse=True)
+        included, excluded = self._partition_blocks(sorted_blocks)
 
+        report = self._build_report(included, excluded)
+        self._window.assembly_report = report
+        self._emit_assembly_complete(report, included, excluded)
+        self._window.check_budget_warnings()
+
+        return self._window
+
+    def _partition_blocks(
+        self, sorted_blocks: list[ContextBlock]
+    ) -> tuple[list[BlockDecision], list[BlockDecision]]:
+        """Add fitting blocks to the window and partition into included/excluded."""
         included: list[BlockDecision] = []
         excluded: list[BlockDecision] = []
 
         for block in sorted_blocks:
             block_tokens = block.token_count
-            origin_summary = block.origin.summary() if block.origin else "unknown"
+            fits_budget = (
+                self._window.token_count + block_tokens <= self._window.max_tokens
+            )
 
-            if self._window.token_count + block_tokens <= self._window.max_tokens:
+            if fits_budget:
                 self._window.add_unchecked(block)
-                included.append(
-                    BlockDecision(
-                        block_name=block.display_name,
-                        block_type=block.type.value,
-                        tokens=block_tokens,
-                        priority=block.priority,
-                        origin_summary=origin_summary,
-                    )
-                )
+                included.append(self._create_decision(block, block_tokens))
             else:
                 excluded.append(
-                    BlockDecision(
-                        block_name=block.display_name,
-                        block_type=block.type.value,
-                        tokens=block_tokens,
-                        priority=block.priority,
-                        origin_summary=origin_summary,
-                        reason="budget_exceeded",
-                    )
+                    self._create_decision(block, block_tokens, reason="budget_exceeded")
                 )
 
-        report = AssemblyReport(
+        return included, excluded
+
+    @staticmethod
+    def _create_decision(
+        block: ContextBlock,
+        block_tokens: int,
+        reason: str | None = None,
+    ) -> BlockDecision:
+        """Create a BlockDecision record for a block."""
+        origin_summary = block.origin.summary() if block.origin else "unknown"
+        return BlockDecision(
+            block_name=block.display_name,
+            block_type=block.type.value,
+            tokens=block_tokens,
+            priority=block.priority,
+            origin_summary=origin_summary,
+            reason=reason,
+        )
+
+    def _build_report(
+        self,
+        included: list[BlockDecision],
+        excluded: list[BlockDecision],
+    ) -> AssemblyReport:
+        """Build the assembly report from included/excluded decisions."""
+        return AssemblyReport(
             included=included,
             excluded=excluded,
             total_tokens=self._window.token_count,
@@ -119,9 +143,13 @@ class ContextAssembler:
             cost_estimate=self._window.cost_estimate,
         )
 
-        self._window.assembly_report = report
-
-        # Emit ASSEMBLY_COMPLETE event
+    @staticmethod
+    def _emit_assembly_complete(
+        report: AssemblyReport,
+        included: list[BlockDecision],
+        excluded: list[BlockDecision],
+    ) -> None:
+        """Emit the ASSEMBLY_COMPLETE event."""
         emit(
             EventData(
                 event=ContextEvent.ASSEMBLY_COMPLETE,
@@ -133,11 +161,6 @@ class ContextAssembler:
                 },
             )
         )
-
-        # Check budget warnings after assembly
-        self._window.check_budget_warnings()
-
-        return self._window
 
     @property
     def report(self) -> AssemblyReport | None:
