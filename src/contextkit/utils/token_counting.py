@@ -29,12 +29,17 @@ def content_hash(content: str) -> int:
 
 
 def _get_encoder(encoding: str) -> Any:
-    """Try to get a tiktoken encoder, return None if unavailable."""
+    """Try to get a tiktoken encoder, return None if unavailable.
+
+    Catches broad Exception because tiktoken may raise ImportError
+    (not installed), KeyError (unknown encoding), or network errors
+    (ConnectionError/OSError) when downloading encoding files.
+    """
     try:
         import tiktoken
 
         return tiktoken.get_encoding(encoding)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 

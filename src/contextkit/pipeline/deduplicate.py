@@ -78,7 +78,9 @@ class DeduplicateStep(PipelineStep):
                 block.content, duplicate_of.content
             )
         else:
-            similarity_score = 1.0
+            # Non-string content is never deduped by _find_duplicate,
+            # so this branch is only a safety fallback.
+            similarity_score = 0.0
 
         block.mutations.append(
             Mutation(

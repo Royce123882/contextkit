@@ -86,7 +86,7 @@ class TrimStep(PipelineStep):
             return blocks
 
         # Sort by priority ascending (remove lowest first)
-        blocks.sort(key=lambda b: b.priority)
+        blocks = sorted(blocks, key=lambda b: b.priority)
         kept: List[ContextBlock] = []
         budget_used = 0
 

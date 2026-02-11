@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Dict, List
 
 from contextkit.core import ContextBlock
@@ -11,11 +12,12 @@ class SharedMemory:
     """Memory blocks shared across multiple agents.
 
     A simple shared store where agents can publish and read
-    named blocks. Thread-safe for basic use cases.
+    named blocks. Thread-safe via internal lock.
     """
 
     def __init__(self) -> None:
         self._blocks: Dict[str, ContextBlock] = {}
+        self._lock = threading.Lock()
 
     def publish(
         self,
@@ -28,7 +30,8 @@ class SharedMemory:
             name: Shared block name.
             block: The block to share.
         """
-        self._blocks[name] = block
+        with self._lock:
+            self._blocks[name] = block
 
     def read(self, name: str) -> ContextBlock | None:
         """Read a block from shared memory.
@@ -39,11 +42,13 @@ class SharedMemory:
         Returns:
             The block, or None if not found.
         """
-        return self._blocks.get(name)
+        with self._lock:
+            return self._blocks.get(name)
 
     def list_blocks(self) -> List[str]:
         """List all shared block names."""
-        return sorted(self._blocks.keys())
+        with self._lock:
+            return sorted(self._blocks.keys())
 
     def remove(self, name: str) -> bool:
         """Remove a block from shared memory.
@@ -54,16 +59,19 @@ class SharedMemory:
         Returns:
             True if removed, False if not found.
         """
-        if name in self._blocks:
-            del self._blocks[name]
-            return True
-        return False
+        with self._lock:
+            if name in self._blocks:
+                del self._blocks[name]
+                return True
+            return False
 
     def get_all(self) -> List[ContextBlock]:
         """Get all shared blocks."""
-        return list(self._blocks.values())
+        with self._lock:
+            return list(self._blocks.values())
 
     @property
     def block_count(self) -> int:
         """Number of shared blocks."""
-        return len(self._blocks)
+        with self._lock:
+            return len(self._blocks)

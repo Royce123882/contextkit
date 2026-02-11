@@ -27,7 +27,7 @@ jobs:
         run: ruff check src/
 
       - name: Type check with mypy
-        run: mypy src/
+        run: mypy --strict src/
 
-      - name: Run tests
-        run: pytest --cov=contextkit --cov-report=term-missing
+      - name: Run tests with coverage
+        run: pytest --cov=contextkit --cov-report=term-missing --cov-fail-under=90

@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List
 
 from contextkit.core import BudgetExceededError, ContextWindow
+
+logger = logging.getLogger("contextkit")
 from contextkit.observe.context_timeline import ContextTimeline
 from contextkit.scope.handoff_package import HandoffPackage
 from contextkit.scope.scratchpad import Scratchpad
@@ -102,7 +105,9 @@ class ContextScope:
                     self._window.add(block)
                     imported += 1
                 except BudgetExceededError:
-                    pass  # Skip blocks that exceed budget
+                    logger.warning(
+                        "Skipped shared block '%s': exceeds budget", name
+                    )
 
         return imported
 
@@ -155,7 +160,10 @@ class ContextScope:
                 self._window.add(block)
                 added += 1
             except BudgetExceededError:
-                pass  # Skip if budget exceeded
+                logger.warning(
+                    "Skipped handoff block '%s': exceeds budget",
+                    block.display_name,
+                )
 
         # Import scratchpad notes
         if package.scratchpad is not None:
