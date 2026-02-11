@@ -85,12 +85,12 @@ Token counting is used everywhere. Build it once, cache it, and make it availabl
 
 **Tasks:**
 
-- [ ] Create `src/contextkit/_tokens.py`:
+- [ ] Create `src/contextkit/utils/token_counting.py`:
   - `count(content: str | list[dict], encoding: str = "cl100k_base") -> int`
   - `fits_budget(content: str | list[dict], max_tokens: int, encoding: str = "cl100k_base") -> bool`
   - LRU cache on `count()` keyed by content hash + encoding name
   - For `list[dict]` content (message lists), count each message's content and add per-message overhead
-- [ ] Create `src/contextkit/_cache.py` with shared LRU cache config (max size, TTL)
+- [ ] Create `src/contextkit/utils/cache.py` with shared LRU cache config (max size, TTL)
 - [ ] Add `token_count` property to `ContextBlock` that uses the cached counter
 - [ ] Re-export `count` and `fits_budget` from `contextkit.tokens` (public API)
 - [ ] Write tests in `tests/test_tokens.py`:

@@ -201,7 +201,7 @@ def _build_type_specific_details(block: ContextBlock) -> List[str]:
 
 def _inspect_messages_table(messages: List[Dict[str, Any]]) -> List[str]:
     """Build a table of conversation messages for SHORT_TERM_MEMORY."""
-    from contextkit._tokens import count
+    from contextkit.utils.token_counting import count
 
     headers = ["#", "Role", "Tokens", "Content"]
     rows = []
@@ -221,7 +221,7 @@ def _inspect_messages_table(messages: List[Dict[str, Any]]) -> List[str]:
 
 def _inspect_chunks_table(chunks: List[Dict[str, Any]]) -> List[str]:
     """Build a table of RAG chunks for RAG blocks."""
-    from contextkit._tokens import count
+    from contextkit.utils.token_counting import count
 
     headers = ["#", "Source", "Tokens", "Relevance", "Content"]
     rows = []

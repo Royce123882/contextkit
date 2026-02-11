@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import List, Tuple
 
-from contextkit._tokens import count as count_tokens
+from contextkit.utils.token_counting import count as count_tokens
 from contextkit.constants import DEFAULT_ENCODING, DEFAULT_TOP_K, PRIORITY_FILE_CONTEXT
 from contextkit.core import BlockType, ContextBlock
 from contextkit.files.file_reference import FileReference

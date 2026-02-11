@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
 
-from contextkit._tokens import count as count_tokens
+from contextkit.utils.token_counting import count as count_tokens
 from contextkit.constants import (
     DEFAULT_ENCODING,
     DEFAULT_EXAMPLE_CANDIDATE_LIMIT,

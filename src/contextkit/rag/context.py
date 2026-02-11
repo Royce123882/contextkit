@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import List
 
-from contextkit._tokens import count as count_tokens
+from contextkit.utils.token_counting import count as count_tokens
 from contextkit.constants import (
     DEFAULT_ENCODING,
     DEFAULT_SIMILARITY_THRESHOLD,

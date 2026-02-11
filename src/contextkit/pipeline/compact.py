@@ -8,7 +8,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import List
 
-from contextkit._tokens import count as count_tokens
+from contextkit.utils.token_counting import count as count_tokens
 from contextkit.constants import (
     DEFAULT_COMPACT_MIN_TOKENS,
     DEFAULT_COMPACT_TARGET_RATIO,

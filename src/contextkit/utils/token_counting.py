@@ -12,7 +12,7 @@ import hashlib
 import logging
 from typing import Any, Dict, List
 
-from contextkit._cache import token_count_cache
+from contextkit.utils.cache import token_count_cache
 from contextkit.constants import (
     CHARS_PER_TOKEN_ESTIMATE,
     DEFAULT_ENCODING,
@@ -22,7 +22,7 @@ from contextkit.constants import (
 logger = logging.getLogger("contextkit")
 
 
-def _content_hash(content: str) -> int:
+def content_hash(content: str) -> int:
     """Return a stable integer hash for content string."""
     digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
     return int(digest, 16)
@@ -62,7 +62,7 @@ def count(
 
 def _count_string(text: str, encoding: str) -> int:
     """Count tokens in a plain string, using cache."""
-    cache_key = (_content_hash(text), encoding)
+    cache_key = (content_hash(text), encoding)
     cached: int | None = token_count_cache.get(cache_key)
     if cached is not None:
         return cached

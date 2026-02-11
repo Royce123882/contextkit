@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from contextkit._tokens import count as count_tokens
+from contextkit.utils.token_counting import count as count_tokens
 from contextkit.constants import DEFAULT_ENCODING, PRIORITY_SHORT_TERM_MEMORY
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin

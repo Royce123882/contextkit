@@ -220,7 +220,7 @@ class TestChunkToBudget:
         assert len(result) < len(content)
 
     def test_respects_budget(self) -> None:
-        from contextkit._tokens import count as count_tokens
+        from contextkit.utils.token_counting import count as count_tokens
 
         content = "Hello world this is a test " * 50
         result = _chunk_to_budget(content, max_tokens=20, encoding="cl100k_base")

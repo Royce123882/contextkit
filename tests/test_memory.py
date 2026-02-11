@@ -253,6 +253,9 @@ class TestLongTermMemory:
         assert backend.record_count == 1
 
 
+aiosqlite = pytest.importorskip("aiosqlite", reason="aiosqlite not installed")
+
+
 class TestSQLiteBackend:
     """Tests for the SQLiteBackend persistent memory storage."""
 

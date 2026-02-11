@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 
 from pydantic import BaseModel, Field
 
-from contextkit._tokens import count as count_tokens
+from contextkit.utils.token_counting import count as count_tokens
 from contextkit.constants import DEFAULT_ENCODING, PRIORITY_DEFAULT
 from contextkit.observe.provenance import Mutation, Origin
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
 
-from contextkit._cache import clear_token_cache
+from contextkit.utils.cache import clear_token_cache
 from contextkit.constants import DEFAULT_ENCODING
 from contextkit.core.block import BlockType, BudgetExceededError, ContextBlock
 from contextkit.models import get_model

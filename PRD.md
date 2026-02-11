@@ -80,8 +80,12 @@ contextkit/
       core.py                # ContextWindow, ContextBlock, BlockType, Origin
       assembler.py           # ContextAssembler, AssemblyReport
       models.py              # Model registry (limits, tokenizers, pricing)
-      _tokens.py             # Token counting with LRU cache
-      _cache.py              # Shared caching utilities
+      tokens.py              # Public token counting API
+      utils/
+        __init__.py
+        token_counting.py    # Token counting with LRU cache
+        cache.py             # Shared caching utilities
+        text_similarity.py   # Word-overlap similarity functions
       adapters/
         __init__.py
         base.py              # ProviderAdapter protocol

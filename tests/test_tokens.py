@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from contextkit._cache import clear_token_cache, token_count_cache
-from contextkit._tokens import _content_hash, count, fits_budget
+from contextkit.utils.cache import clear_token_cache, token_count_cache
+from contextkit.utils.token_counting import content_hash, count, fits_budget
 
 
 class TestTokenCount:
@@ -89,20 +89,20 @@ class TestFitsBudget:
 
 
 class TestContentHash:
-    """Tests for the _content_hash function."""
+    """Tests for the content_hash function."""
 
     def test_deterministic(self) -> None:
-        h1 = _content_hash("test")
-        h2 = _content_hash("test")
+        h1 = content_hash("test")
+        h2 = content_hash("test")
         assert h1 == h2
 
     def test_different_content_different_hash(self) -> None:
-        h1 = _content_hash("hello")
-        h2 = _content_hash("world")
+        h1 = content_hash("hello")
+        h2 = content_hash("world")
         assert h1 != h2
 
     def test_returns_integer(self) -> None:
-        result = _content_hash("test")
+        result = content_hash("test")
         assert isinstance(result, int)
 
 
