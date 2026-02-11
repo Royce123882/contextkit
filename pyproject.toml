@@ -36,8 +36,11 @@ dependencies = [
 [project.optional-dependencies]
 sqlite = ["aiosqlite>=0.19.0"]
 chroma = ["chromadb>=0.5.0"]
+qdrant = ["qdrant-client>=1.6.1"]
+pgvector = ["asyncpg>=0.29.0"]
+pinecone = ["pinecone>=3.0.0"]
 templates = ["Jinja2>=3.1"]
-all = ["contextkit[sqlite,chroma,templates]"]
+all = ["contextkit[sqlite,chroma,qdrant,pgvector,pinecone,templates]"]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
@@ -109,7 +112,10 @@ strict = true
 mypy_path = "src"
 
 [[tool.mypy.overrides]]
-module = ["tiktoken", "cachetools", "aiosqlite"]
+module = [
+    "tiktoken", "cachetools", "aiosqlite",
+    "qdrant_client", "chromadb", "asyncpg", "pinecone",
+]
 ignore_missing_imports = true
 
 [tool.coverage.run]

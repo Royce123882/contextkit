@@ -9,6 +9,7 @@ from contextkit.pipeline import (
     ContextPipeline,
     DeduplicateStep,
     FilterStep,
+    MaskStep,
     PipelineReport,
     ReorderStep,
     StepReport,
@@ -471,3 +472,94 @@ class TestContextPipeline:
         assert report is not None
         # Cost delta should be >= 0 (we removed blocks)
         assert report.cost_delta >= 0
+
+
+class TestMaskStep:
+    """Tests for the MaskStep."""
+
+    def test_masks_old_blocks(self) -> None:
+        step = MaskStep(window=2, min_tokens=1)
+        blocks = [
+            _make_block("a", content="word " * 20),
+            _make_block("b", content="word " * 20),
+            _make_block("c", content="word " * 20),
+            _make_block("d", content="word " * 20),
+        ]
+        result = step.process(blocks)
+        assert len(result) == 4
+        # Last 2 should be untouched, first 2 masked
+        assert result[2].content == "word " * 20
+        assert result[3].content == "word " * 20
+        assert "[details omitted" in result[0].content
+        assert "[details omitted" in result[1].content
+
+    def test_keeps_all_within_window(self) -> None:
+        step = MaskStep(window=5, min_tokens=1)
+        blocks = [_make_block(f"b{i}", content="word " * 20) for i in range(3)]
+        result = step.process(blocks)
+        # All within window -- nothing masked
+        for block in result:
+            assert "omitted" not in (block.content if isinstance(block.content, str) else "")
+
+    def test_records_mutation(self) -> None:
+        step = MaskStep(window=1, min_tokens=1)
+        blocks = [
+            _make_block("old", content="word " * 30),
+            _make_block("new", content="word " * 30),
+        ]
+        result = step.process(blocks)
+        assert len(result[0].mutations) == 1
+        assert result[0].mutations[0].action == "masked"
+        assert result[0].mutations[0].tokens_before > result[0].mutations[0].tokens_after
+
+    def test_skips_small_blocks(self) -> None:
+        step = MaskStep(window=1, min_tokens=100)
+        blocks = [
+            _make_block("old", content="short"),
+            _make_block("new", content="short"),
+        ]
+        result = step.process(blocks)
+        # Both should be kept as-is (below min_tokens)
+        assert result[0].content == "short"
+
+    def test_block_type_filter(self) -> None:
+        step = MaskStep(
+            window=1,
+            min_tokens=1,
+            block_types=["tool_outputs"],
+        )
+        blocks = [
+            _make_block("tool1", content="word " * 20, block_type=BlockType.TOOL_OUTPUTS),
+            _make_block("user1", content="word " * 20, block_type=BlockType.USER_CONTEXT),
+            _make_block("tool2", content="word " * 20, block_type=BlockType.TOOL_OUTPUTS),
+        ]
+        result = step.process(blocks)
+        # tool1 should be masked (old TOOL_OUTPUTS), user1 untouched (different type)
+        assert "[details omitted" in result[0].content
+        assert result[1].content == "word " * 20  # USER_CONTEXT not in filter
+        assert result[2].content == "word " * 20  # Most recent TOOL_OUTPUTS kept
+
+    def test_custom_placeholder(self) -> None:
+        step = MaskStep(window=1, min_tokens=1, placeholder="<REDACTED>")
+        blocks = [
+            _make_block("old", content="word " * 20),
+            _make_block("new", content="word " * 20),
+        ]
+        result = step.process(blocks)
+        assert result[0].content == "<REDACTED>"
+
+    def test_step_name(self) -> None:
+        step = MaskStep()
+        assert step.name == "MaskStep"
+
+    def test_skips_non_string_content(self) -> None:
+        step = MaskStep(window=1, min_tokens=1)
+        block_list = ContextBlock(
+            type=BlockType.SHORT_TERM_MEMORY,
+            content=[{"role": "user", "content": "hi"}],
+            name="messages",
+        )
+        blocks = [block_list, _make_block("new", content="word " * 20)]
+        result = step.process(blocks)
+        # List content should pass through unchanged
+        assert result[0].content == [{"role": "user", "content": "hi"}]
