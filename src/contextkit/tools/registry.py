@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
+from contextkit.utils.text_similarity import word_overlap_score
 
 
 class ToolDefinition(BaseModel):
@@ -162,16 +163,10 @@ class ToolRegistry:
             candidates = [t for t in candidates if all(tag in t.tags for tag in tags)]
 
         # Score by keyword overlap with task description
-        task_words = set(task_description.lower().split())
         scored: list[tuple[float, ToolDefinition]] = []
-
         for tool in candidates:
-            desc_words = set(tool.description.lower().split())
-            name_words = set(tool.name.lower().replace("_", " ").split())
-            all_words = desc_words | name_words
-
-            overlap = len(task_words & all_words)
-            score = overlap / max(len(task_words), 1)
+            combined_text = f"{tool.name} {tool.description}"
+            score = word_overlap_score(task_description, combined_text)
             scored.append((score, tool))
 
         scored.sort(key=lambda x: x[0], reverse=True)

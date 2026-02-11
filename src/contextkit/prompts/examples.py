@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from contextkit._tokens import count as count_tokens
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
+from contextkit.utils.text_similarity import word_overlap_score
 
 
 class Example(BaseModel):
@@ -115,20 +116,13 @@ class ExampleStore:
         Returns:
             List of (Example, similarity_score) tuples.
         """
-        input_words = set(input_text.lower().split())
         scored: list[tuple[float, Example]] = []
 
         for example in self._examples.values():
             if tags and not all(t in example.tags for t in tags):
                 continue
 
-            example_words = set(example.input_text.lower().split())
-            if not input_words or not example_words:
-                scored.append((0.0, example))
-                continue
-
-            overlap = len(input_words & example_words)
-            similarity = overlap / max(len(input_words), len(example_words))
+            similarity = word_overlap_score(input_text, example.input_text)
             scored.append((similarity, example))
 
         scored.sort(key=lambda entry: entry[0], reverse=True)

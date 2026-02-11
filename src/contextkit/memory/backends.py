@@ -12,6 +12,8 @@ from typing import Any, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
+from contextkit.utils.text_similarity import word_overlap_score
+
 # Scoring weights for relevance ranking in retrieval.
 # Word match contributes 70%, record importance contributes 30%.
 _WORD_SCORE_WEIGHT = 0.7
@@ -151,20 +153,15 @@ class InMemoryBackend:
     ) -> list[MemoryRecord]:
         """Retrieve records by keyword matching and importance."""
         results: list[MemoryRecord] = []
-        query_lower = query.lower()
 
         for record in self._records.values():
             if tags and not all(tag in record.tags for tag in tags):
                 continue
             results.append(record)
 
-        # Score by simple substring matching + importance
         def relevance_score(rec: MemoryRecord) -> float:
-            content_lower = rec.content.lower()
-            query_words = query_lower.split()
-            match_count = sum(1 for word in query_words if word in content_lower)
-            word_score = match_count / max(len(query_words), 1)
-            return word_score * _WORD_SCORE_WEIGHT + rec.importance * _IMPORTANCE_WEIGHT
+            score = word_overlap_score(query, rec.content)
+            return score * _WORD_SCORE_WEIGHT + rec.importance * _IMPORTANCE_WEIGHT
 
         results.sort(key=relevance_score, reverse=True)
         return results[:top_k]

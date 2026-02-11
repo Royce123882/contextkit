@@ -11,6 +11,7 @@ from contextkit._tokens import count as count_tokens
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
 from contextkit.rag.backends import Chunk, RetrieverBackend
+from contextkit.utils.text_similarity import word_overlap_similarity
 
 
 class RAGContext:
@@ -130,19 +131,11 @@ def _deduplicate_chunks(
 
     result: list[Chunk] = []
     for chunk in chunks:
-        is_duplicate = False
-        chunk_words = set(chunk.content.lower().split())
-
-        for existing in result:
-            existing_words = set(existing.content.lower().split())
-            if not chunk_words or not existing_words:
-                continue
-            overlap = len(chunk_words & existing_words)
-            similarity = overlap / min(len(chunk_words), len(existing_words))
-            if similarity >= similarity_threshold:
-                is_duplicate = True
-                break
-
+        is_duplicate = any(
+            word_overlap_similarity(chunk.content, existing.content)
+            >= similarity_threshold
+            for existing in result
+        )
         if not is_duplicate:
             result.append(chunk)
 

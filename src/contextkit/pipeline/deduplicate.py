@@ -8,6 +8,7 @@ from __future__ import annotations
 from contextkit.core import ContextBlock
 from contextkit.observe.provenance import Mutation
 from contextkit.pipeline.base import PipelineStep
+from contextkit.utils.text_similarity import word_overlap_similarity
 
 
 class DeduplicateStep(PipelineStep):
@@ -51,25 +52,14 @@ class DeduplicateStep(PipelineStep):
         self, block: ContextBlock, existing_blocks: list[ContextBlock]
     ) -> ContextBlock | None:
         """Find an existing block that is a near-duplicate of the given block."""
-        block_words = (
-            set(block.content.lower().split())
-            if isinstance(block.content, str)
-            else set()
-        )
-        if not block_words:
+        if not isinstance(block.content, str):
             return None
 
         for existing in existing_blocks:
             if not isinstance(existing.content, str):
                 continue
-            existing_words = set(existing.content.lower().split())
-            if not existing_words:
-                continue
-
-            overlap = len(block_words & existing_words)
-            similarity_score = overlap / min(len(block_words), len(existing_words))
-
-            if similarity_score >= self._threshold:
+            similarity = word_overlap_similarity(block.content, existing.content)
+            if similarity >= self._threshold:
                 return existing
 
         return None
@@ -78,20 +68,10 @@ class DeduplicateStep(PipelineStep):
         self, block: ContextBlock, duplicate_of: ContextBlock
     ) -> None:
         """Record a mutation for a block removed as a duplicate."""
-        block_words = (
-            set(block.content.lower().split())
-            if isinstance(block.content, str)
-            else set()
-        )
-        existing_words = (
-            set(duplicate_of.content.lower().split())
-            if isinstance(duplicate_of.content, str)
-            else set()
-        )
-
-        if block_words and existing_words:
-            overlap = len(block_words & existing_words)
-            similarity_score = overlap / min(len(block_words), len(existing_words))
+        if isinstance(block.content, str) and isinstance(duplicate_of.content, str):
+            similarity_score = word_overlap_similarity(
+                block.content, duplicate_of.content
+            )
         else:
             similarity_score = 1.0
 
