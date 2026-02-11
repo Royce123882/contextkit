@@ -6,6 +6,7 @@ budget. Supports format-aware parsing for markdown, code, and CSV.
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 
@@ -14,6 +15,8 @@ from pydantic import BaseModel
 from contextkit._tokens import count as count_tokens
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
+
+logger = logging.getLogger("contextkit")
 
 
 class FileReference(BaseModel):
@@ -95,9 +98,7 @@ class FileContext:
 
         return list(self._index)
 
-    def search(
-        self, query: str, top_k: int = 5
-    ) -> list[FileReference]:
+    def search(self, query: str, top_k: int = 5) -> list[FileReference]:
         """Search indexed files by name or path substring.
 
         Args:
@@ -157,10 +158,9 @@ class FileContext:
 
         for i, ref in enumerate(refs):
             try:
-                content = Path(ref.path).read_text(
-                    encoding="utf-8"
-                )
-            except (OSError, UnicodeDecodeError):
+                content = Path(ref.path).read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError) as exc:
+                logger.debug("Skipped file %s: %s", ref.path, exc)
                 continue
 
             token_count = count_tokens(content, encoding)
@@ -170,12 +170,8 @@ class FileContext:
                     # Try chunking the file
                     remaining = max_tokens - total_tokens
                     if remaining > 0:
-                        content = _chunk_to_budget(
-                            content, remaining, encoding
-                        )
-                        token_count = count_tokens(
-                            content, encoding
-                        )
+                        content = _chunk_to_budget(content, remaining, encoding)
+                        token_count = count_tokens(content, encoding)
                     else:
                         break
 

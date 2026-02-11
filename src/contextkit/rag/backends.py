@@ -10,6 +10,10 @@ from typing import Any, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
+# Scoring weights for combining keyword match and relevance.
+_QUERY_MATCH_WEIGHT = 0.7
+_RELEVANCE_WEIGHT = 0.3
+
 
 class Chunk(BaseModel):
     """A retrieved text chunk from a knowledge source.
@@ -84,21 +88,25 @@ class InMemoryRetriever:
         query: str,
         top_k: int = 5,
     ) -> list[Chunk]:
+        """Retrieve chunks matching the query by keyword overlap."""
         query_words = set(query.lower().split())
 
         scored: list[tuple[float, Chunk]] = []
         for chunk in self._chunks:
             content_words = set(chunk.content.lower().split())
             overlap = len(query_words & content_words)
-            score = overlap / max(len(query_words), 1)
-            # Combine with existing relevance score
-            final_score = score * 0.7 + chunk.relevance_score * 0.3
+            keyword_score = overlap / max(len(query_words), 1)
+            final_score = (
+                keyword_score * _QUERY_MATCH_WEIGHT
+                + chunk.relevance_score * _RELEVANCE_WEIGHT
+            )
             scored.append((final_score, chunk))
 
         scored.sort(key=lambda x: x[0], reverse=True)
         return [chunk for _, chunk in scored[:top_k]]
 
     async def health_check(self) -> bool:
+        """Return True (in-memory backend is always healthy)."""
         return True
 
     @property

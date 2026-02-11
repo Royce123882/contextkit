@@ -30,9 +30,7 @@ class TurnSnapshot(BaseModel):
     """
 
     turn: int
-    timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     token_count: int = 0
     max_tokens: int = 0
     block_count: int = 0
@@ -98,9 +96,7 @@ class ContextTimeline:
         removed = sorted(prev_names - current_names)
 
         budget_pct = (
-            (token_count / self._max_tokens * 100)
-            if self._max_tokens > 0
-            else 0.0
+            (token_count / self._max_tokens * 100) if self._max_tokens > 0 else 0.0
         )
 
         snapshot = TurnSnapshot(
@@ -172,9 +168,7 @@ class ContextTimeline:
         data = {
             "total_turns": self._current_turn,
             "max_tokens": self._max_tokens,
-            "snapshots": [
-                s.model_dump(mode="json") for s in self._snapshots
-            ],
+            "snapshots": [s.model_dump(mode="json") for s in self._snapshots],
         }
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)

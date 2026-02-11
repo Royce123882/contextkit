@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 def diff_windows(
     window_a: ContextWindow,
     window_b: ContextWindow,
-    format: str = "text",  # noqa: A002
+    format: str = "text",
 ) -> str:
     """Compare two context windows and show differences.
 
@@ -50,8 +50,7 @@ def diff_windows(
 
     lines: list[str] = []
     lines.append(
-        f"Context diff: {len(window_a.blocks)} blocks -> "
-        f"{len(window_b.blocks)} blocks"
+        f"Context diff: {len(window_a.blocks)} blocks -> {len(window_b.blocks)} blocks"
     )
     lines.append("")
 
@@ -60,8 +59,7 @@ def diff_windows(
         for name in sorted(added):
             block = blocks_b[name]
             lines.append(
-                f"  + {name} ({block.token_count:,} tokens, "
-                f"priority {block.priority})"
+                f"  + {name} ({block.token_count:,} tokens, priority {block.priority})"
             )
         lines.append("")
 
@@ -70,8 +68,7 @@ def diff_windows(
         for name in sorted(removed):
             block = blocks_a[name]
             lines.append(
-                f"  - {name} ({block.token_count:,} tokens, "
-                f"priority {block.priority})"
+                f"  - {name} ({block.token_count:,} tokens, priority {block.priority})"
             )
         lines.append("")
 
@@ -80,10 +77,7 @@ def diff_windows(
         for name, tok_a, tok_b in sorted(changed):
             delta = tok_b - tok_a
             sign = "+" if delta > 0 else ""
-            lines.append(
-                f"  ~ {name}: {tok_a:,} -> {tok_b:,} tokens "
-                f"({sign}{delta:,})"
-            )
+            lines.append(f"  ~ {name}: {tok_a:,} -> {tok_b:,} tokens ({sign}{delta:,})")
         lines.append("")
 
     # Summary

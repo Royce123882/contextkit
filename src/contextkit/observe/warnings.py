@@ -57,9 +57,7 @@ class BudgetMonitor:
         fired_this_check: list[float] = []
 
         # Reset thresholds that usage has dropped below
-        thresholds_to_reset = {
-            t for t in self._fired if usage_fraction < t
-        }
+        thresholds_to_reset = {t for t in self._fired if usage_fraction < t}
         self._fired -= thresholds_to_reset
 
         # Fire thresholds that have been crossed

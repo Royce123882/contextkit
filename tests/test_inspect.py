@@ -207,9 +207,7 @@ class TestInspectWindow:
                     {
                         "name": "search_docs",
                         "description": "Search documentation",
-                        "parameters": {
-                            "properties": {"query": {"type": "string"}}
-                        },
+                        "parameters": {"properties": {"query": {"type": "string"}}},
                     },
                 ],
                 name="tools",
@@ -410,9 +408,7 @@ class TestDumpWindow:
             )
         )
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             path = f.name
 
         try:
@@ -441,9 +437,7 @@ class TestDumpWindow:
             ]
         )
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             path = f.name
 
         try:
@@ -463,9 +457,7 @@ class TestDumpWindow:
             )
         )
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             path = f.name
 
         try:

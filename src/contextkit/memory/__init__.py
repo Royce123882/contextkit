@@ -13,10 +13,10 @@ from contextkit.memory.long_term import LongTermMemory
 from contextkit.memory.short_term import ShortTermMemory, trim_conversation
 
 __all__ = [
+    "InMemoryBackend",
+    "LongTermMemory",
     "MemoryBackend",
     "MemoryRecord",
-    "InMemoryBackend",
     "ShortTermMemory",
-    "LongTermMemory",
     "trim_conversation",
 ]

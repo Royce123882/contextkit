@@ -38,16 +38,12 @@ class OpenAIAdapter:
         """
         messages: list[dict[str, Any]] = []
 
-        sorted_blocks = sorted(
-            window.blocks, key=lambda b: b.priority, reverse=True
-        )
+        sorted_blocks = sorted(window.blocks, key=lambda b: b.priority, reverse=True)
 
         for block in sorted_blocks:
             if isinstance(block.content, str):
                 role = _block_type_to_role(block.type)
-                messages.append(
-                    {"role": role, "content": block.content}
-                )
+                messages.append({"role": role, "content": block.content})
             elif isinstance(block.content, list):
                 if block.type == BlockType.SYSTEM_PROMPT:
                     for msg in block.content:
@@ -94,17 +90,27 @@ class OpenAIAdapter:
         """
         result_messages: list[dict[str, Any]] = []
         if system:
-            result_messages.append(
-                {"role": "system", "content": system}
-            )
+            result_messages.append({"role": "system", "content": system})
         result_messages.extend(messages)
         return {"messages": result_messages}
 
 
+_BLOCK_TYPE_ROLE_MAP: dict[BlockType, str] = {
+    BlockType.SYSTEM_PROMPT: "system",
+    BlockType.SCRATCHPAD: "assistant",
+}
+
+
 def _block_type_to_role(block_type: BlockType) -> str:
-    """Map a BlockType to an OpenAI message role."""
-    if block_type == BlockType.SYSTEM_PROMPT:
-        return "system"
-    if block_type == BlockType.SCRATCHPAD:
-        return "assistant"
-    return "user"
+    """Map a BlockType to an OpenAI message role.
+
+    Uses a dictionary lookup for easy extension. Defaults to
+    ``"user"`` for types not in the mapping.
+
+    Args:
+        block_type: The BlockType to map.
+
+    Returns:
+        The corresponding OpenAI role string.
+    """
+    return _BLOCK_TYPE_ROLE_MAP.get(block_type, "user")

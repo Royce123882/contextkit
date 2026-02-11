@@ -490,16 +490,12 @@ class TestContextWindow:
     def test_len(self) -> None:
         window = ContextWindow(max_tokens=10_000)
         assert len(window) == 0
-        window.add(
-            ContextBlock(type=BlockType.SYSTEM_PROMPT, content="test")
-        )
+        window.add(ContextBlock(type=BlockType.SYSTEM_PROMPT, content="test"))
         assert len(window) == 1
 
     def test_blocks_returns_copy(self) -> None:
         window = ContextWindow(max_tokens=10_000)
-        block = ContextBlock(
-            type=BlockType.SYSTEM_PROMPT, content="test"
-        )
+        block = ContextBlock(type=BlockType.SYSTEM_PROMPT, content="test")
         window.add(block)
         blocks = window.blocks
         blocks.clear()

@@ -47,9 +47,7 @@ class ToolOutput(BaseModel):
     call_id: str = ""
     result: str = ""
     latency_ms: float = 0.0
-    called_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    called_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_block(self, priority: int = 70) -> ContextBlock:
         """Convert this output to a ContextBlock.
@@ -161,11 +159,7 @@ class ToolRegistry:
 
         # Filter by tags
         if tags:
-            candidates = [
-                t
-                for t in candidates
-                if all(tag in t.tags for tag in tags)
-            ]
+            candidates = [t for t in candidates if all(tag in t.tags for tag in tags)]
 
         # Score by keyword overlap with task description
         task_words = set(task_description.lower().split())
@@ -196,9 +190,7 @@ class ToolRegistry:
                 source="tool",
                 details={
                     "tool_name": tool.name,
-                    "selection_reason": (
-                        f"keyword_score={score:.2f}"
-                    ),
+                    "selection_reason": (f"keyword_score={score:.2f}"),
                 },
             )
             block = ContextBlock(

@@ -17,13 +17,13 @@ from contextkit.observe.events import (
 )
 
 __all__ = [
-    "ContextEvent",
-    "EventData",
     "BlockEventData",
     "BudgetEventData",
+    "ContextEvent",
+    "EventData",
     "PipelineEventData",
-    "on",
-    "emit",
-    "register_handler",
     "clear_handlers",
+    "emit",
+    "on",
+    "register_handler",
 ]

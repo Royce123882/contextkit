@@ -61,17 +61,11 @@ class RAGContext:
         Returns:
             List of ContextBlocks with retrieved content.
         """
-        chunks = await self._retriever.retrieve(
-            query=query, top_k=top_k
-        )
+        chunks = await self._retriever.retrieve(query=query, top_k=top_k)
 
         # Filter by relevance
         if min_relevance > 0:
-            chunks = [
-                c
-                for c in chunks
-                if c.relevance_score >= min_relevance
-            ]
+            chunks = [c for c in chunks if c.relevance_score >= min_relevance]
 
         # Deduplicate by content similarity
         chunks = _deduplicate_chunks(chunks)
@@ -144,9 +138,7 @@ def _deduplicate_chunks(
             if not chunk_words or not existing_words:
                 continue
             overlap = len(chunk_words & existing_words)
-            similarity = overlap / min(
-                len(chunk_words), len(existing_words)
-            )
+            similarity = overlap / min(len(chunk_words), len(existing_words))
             if similarity >= similarity_threshold:
                 is_duplicate = True
                 break

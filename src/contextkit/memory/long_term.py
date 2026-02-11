@@ -84,9 +84,7 @@ class LongTermMemory:
         Returns:
             List of matching MemoryRecords.
         """
-        return await self._backend.retrieve(
-            query=query, top_k=top_k, tags=tags
-        )
+        return await self._backend.retrieve(query=query, top_k=top_k, tags=tags)
 
     async def retrieve_as_blocks(
         self,
@@ -109,9 +107,7 @@ class LongTermMemory:
         Returns:
             List of ContextBlocks with populated Origin.
         """
-        records = await self.retrieve(
-            query=query, top_k=top_k, tags=tags
-        )
+        records = await self.retrieve(query=query, top_k=top_k, tags=tags)
         blocks: list[ContextBlock] = []
         for record in records:
             origin = Origin(
@@ -145,9 +141,7 @@ class LongTermMemory:
         """
         return await self._backend.delete(key)
 
-    async def list_records(
-        self, tags: list[str] | None = None
-    ) -> list[MemoryRecord]:
+    async def list_records(self, tags: list[str] | None = None) -> list[MemoryRecord]:
         """List all memories, optionally filtered by tags.
 
         Args:

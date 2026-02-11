@@ -117,9 +117,7 @@ class TestAnthropicAdapter:
             {"role": "user", "content": "Hello"},
             {"role": "assistant", "content": "Hi!"},
         ]
-        payload = AnthropicAdapter.format_messages(
-            messages, system="Be helpful."
-        )
+        payload = AnthropicAdapter.format_messages(messages, system="Be helpful.")
         assert payload["system"] == "Be helpful."
         assert payload["messages"] == messages
 
@@ -216,9 +214,7 @@ class TestOpenAIAdapter:
         payload = adapter.format(window)
 
         # System should be in messages as role=system
-        system_msgs = [
-            m for m in payload["messages"] if m["role"] == "system"
-        ]
+        system_msgs = [m for m in payload["messages"] if m["role"] == "system"]
         assert len(system_msgs) == 1
         assert system_msgs[0]["content"] == "System instruction"
 
@@ -245,9 +241,7 @@ class TestOpenAIAdapter:
             {"role": "user", "content": "Hello"},
             {"role": "assistant", "content": "Hi!"},
         ]
-        payload = OpenAIAdapter.format_messages(
-            messages, system="Be helpful."
-        )
+        payload = OpenAIAdapter.format_messages(messages, system="Be helpful.")
         assert payload["messages"][0]["role"] == "system"
         assert payload["messages"][0]["content"] == "Be helpful."
         assert len(payload["messages"]) == 3

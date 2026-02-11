@@ -7,4 +7,4 @@ retriever backends, chunk ranking, and budget-aware retrieval.
 from contextkit.rag.backends import Chunk, RetrieverBackend
 from contextkit.rag.context import RAGContext
 
-__all__ = ["RAGContext", "RetrieverBackend", "Chunk"]
+__all__ = ["Chunk", "RAGContext", "RetrieverBackend"]

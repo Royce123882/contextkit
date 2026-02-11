@@ -45,25 +45,15 @@ class TestInMemoryBackend:
 
     def test_store_with_tags(self) -> None:
         backend = InMemoryBackend()
-        asyncio.run(
-            backend.store("k1", "content", tags=["style"])
-        )
-        results = asyncio.run(
-            backend.retrieve("content", tags=["style"])
-        )
+        asyncio.run(backend.store("k1", "content", tags=["style"]))
+        results = asyncio.run(backend.retrieve("content", tags=["style"]))
         assert len(results) == 1
 
     def test_retrieve_filters_by_tags(self) -> None:
         backend = InMemoryBackend()
-        asyncio.run(
-            backend.store("k1", "content", tags=["a"])
-        )
-        asyncio.run(
-            backend.store("k2", "content", tags=["b"])
-        )
-        results = asyncio.run(
-            backend.retrieve("content", tags=["a"])
-        )
+        asyncio.run(backend.store("k1", "content", tags=["a"]))
+        asyncio.run(backend.store("k2", "content", tags=["b"]))
+        results = asyncio.run(backend.retrieve("content", tags=["a"]))
         assert len(results) == 1
         assert results[0].key == "k1"
 
@@ -82,12 +72,8 @@ class TestInMemoryBackend:
 
     def test_list_records_with_tags(self) -> None:
         backend = InMemoryBackend()
-        asyncio.run(
-            backend.store("k1", "a", tags=["x"])
-        )
-        asyncio.run(
-            backend.store("k2", "b", tags=["y"])
-        )
+        asyncio.run(backend.store("k1", "a", tags=["x"]))
+        asyncio.run(backend.store("k2", "b", tags=["y"]))
         records = asyncio.run(backend.list_records(tags=["x"]))
         assert len(records) == 1
 
@@ -100,9 +86,7 @@ class TestInMemoryBackend:
     def test_retrieve_top_k(self) -> None:
         backend = InMemoryBackend()
         for i in range(10):
-            asyncio.run(
-                backend.store(f"k{i}", f"item {i}")
-            )
+            asyncio.run(backend.store(f"k{i}", f"item {i}"))
         results = asyncio.run(backend.retrieve("item", top_k=3))
         assert len(results) == 3
 
@@ -117,9 +101,7 @@ class TestShortTermMemory:
         assert stm.turn_count == 2
 
     def test_sliding_window_trims(self) -> None:
-        stm = ShortTermMemory(
-            strategy="sliding_window", max_turns=3
-        )
+        stm = ShortTermMemory(strategy="sliding_window", max_turns=3)
         for i in range(5):
             stm.add_turn("user", f"Message {i}")
         assert stm.turn_count == 3
@@ -162,10 +144,12 @@ class TestShortTermMemory:
 
     def test_add_messages_bulk(self) -> None:
         stm = ShortTermMemory()
-        stm.add_messages([
-            {"role": "user", "content": "A"},
-            {"role": "assistant", "content": "B"},
-        ])
+        stm.add_messages(
+            [
+                {"role": "user", "content": "A"},
+                {"role": "assistant", "content": "B"},
+            ]
+        )
         assert stm.turn_count == 2
 
     def test_clear(self) -> None:
@@ -199,33 +183,21 @@ class TestTrimConversation:
     """Tests for the standalone trim_conversation utility."""
 
     def test_sliding_window(self) -> None:
-        messages = [
-            {"role": "user", "content": f"Msg {i}"}
-            for i in range(10)
-        ]
-        trimmed = trim_conversation(
-            messages, strategy="sliding_window", max_turns=5
-        )
+        messages = [{"role": "user", "content": f"Msg {i}"} for i in range(10)]
+        trimmed = trim_conversation(messages, strategy="sliding_window", max_turns=5)
         assert len(trimmed) == 5
         assert trimmed[0]["content"] == "Msg 5"
 
     def test_token_budget(self) -> None:
-        messages = [
-            {"role": "user", "content": "word " * 20}
-            for _ in range(10)
-        ]
-        trimmed = trim_conversation(
-            messages, strategy="token_budget", max_tokens=100
-        )
+        messages = [{"role": "user", "content": "word " * 20} for _ in range(10)]
+        trimmed = trim_conversation(messages, strategy="token_budget", max_tokens=100)
         assert len(trimmed) < 10
 
     def test_no_trimming_needed(self) -> None:
         messages = [
             {"role": "user", "content": "Hi"},
         ]
-        trimmed = trim_conversation(
-            messages, max_turns=10
-        )
+        trimmed = trim_conversation(messages, max_turns=10)
         assert len(trimmed) == 1
 
     def test_invalid_strategy(self) -> None:
@@ -250,12 +222,8 @@ class TestLongTermMemory:
 
     def test_retrieve_as_blocks(self) -> None:
         ltm = LongTermMemory()
-        asyncio.run(
-            ltm.store("k1", "Python tips", tags=["code"])
-        )
-        blocks = asyncio.run(
-            ltm.retrieve_as_blocks("Python", top_k=5)
-        )
+        asyncio.run(ltm.store("k1", "Python tips", tags=["code"]))
+        blocks = asyncio.run(ltm.retrieve_as_blocks("Python", top_k=5))
         assert len(blocks) >= 1
         assert blocks[0].type.value == "long_term_memory"
         assert blocks[0].origin is not None

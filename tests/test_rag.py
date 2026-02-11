@@ -35,9 +35,7 @@ class TestInMemoryRetriever:
 
     def test_add_and_retrieve(self) -> None:
         retriever = InMemoryRetriever()
-        retriever.add_chunk(
-            Chunk(content="Python is a programming language")
-        )
+        retriever.add_chunk(Chunk(content="Python is a programming language"))
         results = asyncio.run(retriever.retrieve("Python"))
         assert len(results) >= 1
 
@@ -53,9 +51,7 @@ class TestInMemoryRetriever:
     def test_retrieve_top_k(self) -> None:
         retriever = InMemoryRetriever()
         for i in range(10):
-            retriever.add_chunk(
-                Chunk(content=f"Document about topic {i}")
-            )
+            retriever.add_chunk(Chunk(content=f"Document about topic {i}"))
         results = asyncio.run(retriever.retrieve("topic", top_k=3))
         assert len(results) == 3
 
@@ -152,9 +148,7 @@ class TestRAGContext:
 
     def test_retrieve_with_origin_details(self) -> None:
         retriever = InMemoryRetriever()
-        retriever.add_chunk(
-            Chunk(content="Data", source="src1", relevance_score=0.9)
-        )
+        retriever.add_chunk(Chunk(content="Data", source="src1", relevance_score=0.9))
         rag = RAGContext(retriever, retriever_name="my_retriever")
         blocks = asyncio.run(rag.retrieve("Data"))
         assert blocks[0].origin.details["retriever"] == "my_retriever"
@@ -162,40 +156,26 @@ class TestRAGContext:
 
     def test_retrieve_min_relevance(self) -> None:
         retriever = InMemoryRetriever()
-        retriever.add_chunk(
-            Chunk(content="High relevance", relevance_score=0.9)
-        )
-        retriever.add_chunk(
-            Chunk(content="Low relevance", relevance_score=0.1)
-        )
+        retriever.add_chunk(Chunk(content="High relevance", relevance_score=0.9))
+        retriever.add_chunk(Chunk(content="Low relevance", relevance_score=0.1))
         rag = RAGContext(retriever)
-        blocks = asyncio.run(
-            rag.retrieve("relevance", min_relevance=0.5)
-        )
+        blocks = asyncio.run(rag.retrieve("relevance", min_relevance=0.5))
         # Only the high relevance chunk should pass
         assert len(blocks) == 1
 
     def test_retrieve_max_tokens(self) -> None:
         retriever = InMemoryRetriever()
         for i in range(10):
-            retriever.add_chunk(
-                Chunk(content=f"Long content about topic {i} " * 50)
-            )
+            retriever.add_chunk(Chunk(content=f"Long content about topic {i} " * 50))
         rag = RAGContext(retriever)
-        blocks = asyncio.run(
-            rag.retrieve("topic", max_tokens=50)
-        )
+        blocks = asyncio.run(rag.retrieve("topic", max_tokens=50))
         total = sum(b.token_count for b in blocks)
         assert total <= 50
 
     def test_retrieve_deduplicates(self) -> None:
         retriever = InMemoryRetriever()
-        retriever.add_chunk(
-            Chunk(content="Exact same content here")
-        )
-        retriever.add_chunk(
-            Chunk(content="Exact same content here")
-        )
+        retriever.add_chunk(Chunk(content="Exact same content here"))
+        retriever.add_chunk(Chunk(content="Exact same content here"))
         rag = RAGContext(retriever)
         blocks = asyncio.run(rag.retrieve("content"))
         assert len(blocks) == 1
@@ -209,9 +189,7 @@ class TestRAGContext:
     def test_retrieve_top_k(self) -> None:
         retriever = InMemoryRetriever()
         for i in range(10):
-            retriever.add_chunk(
-                Chunk(content=f"Document {i}", source=f"doc{i}")
-            )
+            retriever.add_chunk(Chunk(content=f"Document {i}", source=f"doc{i}"))
         rag = RAGContext(retriever)
         blocks = asyncio.run(rag.retrieve("Document", top_k=3))
         assert len(blocks) <= 3

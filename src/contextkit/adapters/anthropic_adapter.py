@@ -40,9 +40,7 @@ class AnthropicAdapter:
         system_parts: list[str] = []
         messages: list[dict[str, Any]] = []
 
-        sorted_blocks = sorted(
-            window.blocks, key=lambda b: b.priority, reverse=True
-        )
+        sorted_blocks = sorted(window.blocks, key=lambda b: b.priority, reverse=True)
 
         for block in sorted_blocks:
             if block.type == BlockType.SYSTEM_PROMPT:
@@ -56,9 +54,7 @@ class AnthropicAdapter:
             else:
                 if isinstance(block.content, str):
                     role = _block_type_to_role(block.type)
-                    messages.append(
-                        {"role": role, "content": block.content}
-                    )
+                    messages.append({"role": role, "content": block.content})
                 elif isinstance(block.content, list):
                     messages.extend(block.content)
 

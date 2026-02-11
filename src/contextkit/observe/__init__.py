@@ -2,4 +2,4 @@
 
 from contextkit.observe.provenance import Mutation, Origin
 
-__all__ = ["Origin", "Mutation"]
+__all__ = ["Mutation", "Origin"]

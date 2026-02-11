@@ -36,10 +36,7 @@ class Example(BaseModel):
     @property
     def formatted(self) -> str:
         """Formatted example as input/output pair."""
-        return (
-            f"Input: {self.input_text}\n"
-            f"Output: {self.output_text}"
-        )
+        return f"Input: {self.input_text}\nOutput: {self.output_text}"
 
 
 class ExampleStore:
@@ -96,9 +93,7 @@ class ExampleStore:
             KeyError: If not found.
         """
         if example_id not in self._examples:
-            raise KeyError(
-                f"No example with ID '{example_id}'"
-            )
+            raise KeyError(f"No example with ID '{example_id}'")
         return self._examples[example_id]
 
     def select(
@@ -124,28 +119,20 @@ class ExampleStore:
         scored: list[tuple[float, Example]] = []
 
         for example in self._examples.values():
-            if tags and not all(
-                t in example.tags for t in tags
-            ):
+            if tags and not all(t in example.tags for t in tags):
                 continue
 
-            example_words = set(
-                example.input_text.lower().split()
-            )
+            example_words = set(example.input_text.lower().split())
             if not input_words or not example_words:
                 scored.append((0.0, example))
                 continue
 
             overlap = len(input_words & example_words)
-            similarity = overlap / max(
-                len(input_words), len(example_words)
-            )
+            similarity = overlap / max(len(input_words), len(example_words))
             scored.append((similarity, example))
 
-        scored.sort(key=lambda x: x[0], reverse=True)
-        return [
-            (ex, score) for score, ex in scored[:top_k]
-        ]
+        scored.sort(key=lambda entry: entry[0], reverse=True)
+        return [(example, score) for score, example in scored[:top_k]]
 
     def fit_to_budget(
         self,
@@ -172,9 +159,7 @@ class ExampleStore:
         Returns:
             List of ContextBlocks, one per example, within budget.
         """
-        selected = self.select(
-            input_text, top_k=top_k, tags=tags
-        )
+        selected = self.select(input_text, top_k=top_k, tags=tags)
 
         blocks: list[ContextBlock] = []
         total_tokens = 0

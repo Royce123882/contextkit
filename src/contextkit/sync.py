@@ -75,11 +75,7 @@ class LongTermMemory:
         tags: list[str] | None = None,
     ) -> list[MemoryRecord]:
         """Retrieve matching records (sync)."""
-        return _run_sync(
-            self._async.retrieve(
-                query=query, top_k=top_k, tags=tags
-            )
-        )
+        return _run_sync(self._async.retrieve(query=query, top_k=top_k, tags=tags))
 
     def retrieve_as_blocks(
         self,
@@ -102,8 +98,6 @@ class LongTermMemory:
         """Delete a record by key (sync)."""
         return _run_sync(self._async.delete(key))
 
-    def list_records(
-        self, tags: list[str] | None = None
-    ) -> list[MemoryRecord]:
+    def list_records(self, tags: list[str] | None = None) -> list[MemoryRecord]:
         """List all records (sync)."""
         return _run_sync(self._async.list_records(tags=tags))

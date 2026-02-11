@@ -17,9 +17,7 @@ class TestToolDefinition:
     """Tests for the ToolDefinition model."""
 
     def test_create_with_defaults(self) -> None:
-        tool = ToolDefinition(
-            name="search", description="Search the web"
-        )
+        tool = ToolDefinition(name="search", description="Search the web")
         assert tool.name == "search"
         assert tool.description == "Search the web"
         assert tool.parameters == {}
@@ -40,9 +38,7 @@ class TestToolOutput:
     """Tests for the ToolOutput model."""
 
     def test_create_basic(self) -> None:
-        output = ToolOutput(
-            tool_name="search", result="Found 5 results"
-        )
+        output = ToolOutput(tool_name="search", result="Found 5 results")
         assert output.tool_name == "search"
         assert output.result == "Found 5 results"
         assert output.call_id == ""
@@ -136,12 +132,8 @@ class TestToolRegistry:
 
     def test_select_with_tags(self) -> None:
         registry = ToolRegistry()
-        registry.register(
-            "web_search", "Search web", tags=["web"]
-        )
-        registry.register(
-            "calc", "Calculate things", tags=["math"]
-        )
+        registry.register("web_search", "Search web", tags=["web"])
+        registry.register("calc", "Calculate things", tags=["math"])
         blocks = registry.select("search", tags=["web"])
         assert len(blocks) == 1
 

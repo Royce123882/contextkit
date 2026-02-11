@@ -21,16 +21,12 @@ class TestBudgetMonitor:
 
     def test_warning_fires_at_threshold(self) -> None:
         monitor = BudgetMonitor(thresholds=[0.75])
-        fired = monitor.check(
-            token_count=80, max_tokens=100
-        )
+        fired = monitor.check(token_count=80, max_tokens=100)
         assert 0.75 in fired
 
     def test_warning_does_not_fire_below_threshold(self) -> None:
         monitor = BudgetMonitor(thresholds=[0.75])
-        fired = monitor.check(
-            token_count=50, max_tokens=100
-        )
+        fired = monitor.check(token_count=50, max_tokens=100)
         assert len(fired) == 0
 
     def test_warning_does_not_refire_same_threshold(self) -> None:

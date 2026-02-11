@@ -94,9 +94,7 @@ class TestFullWorkflow:
             ],
             priority=80,
             name="conversation_history",
-            origin=Origin(
-                source="conversation", details={"turn_range": "1-2"}
-            ),
+            origin=Origin(source="conversation", details={"turn_range": "1-2"}),
         )
 
         window.add(system)
@@ -150,9 +148,7 @@ class TestFullWorkflow:
         assert anthropic_payload["messages"] == messages
 
         # OpenAI format
-        openai_payload = OpenAIAdapter.format_messages(
-            messages, system="Be helpful."
-        )
+        openai_payload = OpenAIAdapter.format_messages(messages, system="Be helpful.")
         assert openai_payload["messages"][0]["role"] == "system"
         assert len(openai_payload["messages"]) == 3
 
@@ -162,9 +158,7 @@ class TestFullWorkflow:
 
         @on(ContextEvent.BLOCK_ADDED)
         def log_addition(event: BlockEventData) -> None:
-            events_log.append(
-                f"Added {event.block_name}: {event.token_count} tokens"
-            )
+            events_log.append(f"Added {event.block_name}: {event.token_count} tokens")
 
         @on(ContextEvent.BUDGET_WARNING)
         def log_budget(event: BudgetEventData) -> None:
@@ -271,9 +265,7 @@ class TestFullWorkflow:
             )
         )
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             path = f.name
 
         try:

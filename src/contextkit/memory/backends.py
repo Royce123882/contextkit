@@ -12,6 +12,11 @@ from typing import Any, Protocol, runtime_checkable
 
 from pydantic import BaseModel, Field
 
+# Scoring weights for relevance ranking in retrieval.
+# Word match contributes 70%, record importance contributes 30%.
+_WORD_SCORE_WEIGHT = 0.7
+_IMPORTANCE_WEIGHT = 0.3
+
 
 class MemoryRecord(BaseModel):
     """A single record in a memory backend.
@@ -29,9 +34,7 @@ class MemoryRecord(BaseModel):
     content: str
     metadata: dict[str, Any] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
-    stored_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    stored_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     importance: float = 0.5
 
 
@@ -129,6 +132,7 @@ class InMemoryBackend:
         tags: list[str] | None = None,
         importance: float = 0.5,
     ) -> MemoryRecord:
+        """Store a record in the in-memory dict."""
         record = MemoryRecord(
             key=key,
             content=content,
@@ -145,28 +149,28 @@ class InMemoryBackend:
         top_k: int = 5,
         tags: list[str] | None = None,
     ) -> list[MemoryRecord]:
+        """Retrieve records by keyword matching and importance."""
         results: list[MemoryRecord] = []
         query_lower = query.lower()
 
         for record in self._records.values():
-            if tags and not all(t in record.tags for t in tags):
+            if tags and not all(tag in record.tags for tag in tags):
                 continue
             results.append(record)
 
         # Score by simple substring matching + importance
         def relevance_score(rec: MemoryRecord) -> float:
             content_lower = rec.content.lower()
-            words = query_lower.split()
-            match_count = sum(
-                1 for w in words if w in content_lower
-            )
-            word_score = match_count / max(len(words), 1)
-            return word_score * 0.7 + rec.importance * 0.3
+            query_words = query_lower.split()
+            match_count = sum(1 for word in query_words if word in content_lower)
+            word_score = match_count / max(len(query_words), 1)
+            return word_score * _WORD_SCORE_WEIGHT + rec.importance * _IMPORTANCE_WEIGHT
 
         results.sort(key=relevance_score, reverse=True)
         return results[:top_k]
 
     async def delete(self, key: str) -> bool:
+        """Delete a record by key."""
         if key in self._records:
             del self._records[key]
             return True
@@ -176,12 +180,13 @@ class InMemoryBackend:
         self,
         tags: list[str] | None = None,
     ) -> list[MemoryRecord]:
+        """List records, optionally filtered by tags."""
         if tags is None:
             return list(self._records.values())
         return [
-            r
-            for r in self._records.values()
-            if all(t in r.tags for t in tags)
+            record
+            for record in self._records.values()
+            if all(tag in record.tags for tag in tags)
         ]
 
     @property

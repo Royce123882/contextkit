@@ -44,7 +44,7 @@ def format_text_table(
         A formatted table string.
     """
     # Calculate column widths
-    all_rows = [headers] + rows
+    all_rows = [headers, *rows]
     if footer:
         all_rows.append(footer)
 
@@ -60,9 +60,7 @@ def format_text_table(
             parts.append(str(cell).ljust(width))
         return "| " + " | ".join(parts) + " |"
 
-    separator = "+" + "+".join(
-        "-" * (w + 2) for w in col_widths
-    ) + "+"
+    separator = "+" + "+".join("-" * (w + 2) for w in col_widths) + "+"
 
     lines = [separator, format_row(headers), separator]
     for row in rows:

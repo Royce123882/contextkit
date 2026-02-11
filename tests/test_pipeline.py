@@ -221,7 +221,7 @@ class TestDeduplicateStep:
         ]
         step.process(blocks)
         # The lower priority one should have the mutation
-        dup_block = [b for b in blocks if b.name == "b"][0]
+        dup_block = next(b for b in blocks if b.name == "b")
         assert len(dup_block.mutations) == 1
         assert "overlaps" in dup_block.mutations[0].detail
 
@@ -287,11 +287,7 @@ class TestReorderStep:
         ]
         step.process(blocks)
         # Some blocks should have "moved" mutations
-        moved = [
-            b
-            for b in blocks
-            if any(m.action == "moved" for m in b.mutations)
-        ]
+        moved = [b for b in blocks if any(m.action == "moved" for m in b.mutations)]
         assert len(moved) >= 0  # At least some may be moved
 
     def test_step_name(self) -> None:
@@ -379,15 +375,15 @@ class TestContextPipeline:
     def test_run_multiple_steps(self) -> None:
         window = ContextWindow(max_tokens=10000)
         window.add(_make_block("a", content="Python is great", priority=50))
-        window.add(
-            _make_block("b", content="Python is great", priority=40)
-        )
+        window.add(_make_block("b", content="Python is great", priority=40))
         window.add(_make_block("c", content="low priority", priority=5))
 
-        pipeline = ContextPipeline([
-            TrimStep(min_priority=10),
-            DeduplicateStep(),
-        ])
+        pipeline = ContextPipeline(
+            [
+                TrimStep(min_priority=10),
+                DeduplicateStep(),
+            ]
+        )
         pipeline.run(window)
         # c should be removed by trim, b by dedup
         assert len(window.blocks) == 1
@@ -448,14 +444,14 @@ class TestContextPipeline:
                 ),
             )
         )
-        window.add(
-            _make_block("c", content="content c", priority=70)
-        )
+        window.add(_make_block("c", content="content c", priority=70))
 
-        pipeline = ContextPipeline([
-            FilterStep(min_relevance=0.5),
-            ReorderStep(),
-        ])
+        pipeline = ContextPipeline(
+            [
+                FilterStep(min_relevance=0.5),
+                ReorderStep(),
+            ]
+        )
         pipeline.run(window)
         # a should be filtered out (low relevance)
         names = [b.name for b in window.blocks]
@@ -465,12 +461,8 @@ class TestContextPipeline:
 
     def test_pipeline_cost_delta(self) -> None:
         window = ContextWindow(max_tokens=10000)
-        window.add(
-            _make_block("a", content="test content", priority=50)
-        )
-        window.add(
-            _make_block("b", content="removable", priority=5)
-        )
+        window.add(_make_block("a", content="test content", priority=50))
+        window.add(_make_block("b", content="removable", priority=5))
 
         pipeline = ContextPipeline([TrimStep(min_priority=30)])
         pipeline.run(window)

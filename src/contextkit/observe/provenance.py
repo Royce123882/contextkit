@@ -25,9 +25,7 @@ class Origin(BaseModel):
     """
 
     source: str
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     details: dict[str, Any] = Field(default_factory=dict)
 
     # Convenience properties for common detail fields
@@ -80,11 +78,7 @@ class Origin(BaseModel):
         if self.relevance_score is not None:
             parts.append(f"relevance={self.relevance_score:.2f}")
         if self.query:
-            truncated = (
-                self.query[:30] + "..."
-                if len(self.query) > 30
-                else self.query
-            )
+            truncated = self.query[:30] + "..." if len(self.query) > 30 else self.query
             parts.append(f'query="{truncated}"')
         return "/".join(parts[:3]) + (
             f" ({', '.join(parts[3:])})" if len(parts) > 3 else ""
@@ -106,6 +100,4 @@ class Mutation(BaseModel):
     tokens_after: int
     before_content: str | None = None
     after_content: str | None = None
-    timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

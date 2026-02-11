@@ -28,7 +28,7 @@ def _preview(content: object) -> str:
 def inspect_window(
     window: ContextWindow,
     block_name: str | None = None,
-    format: str = "text",  # noqa: A002
+    format: str = "text",
 ) -> str:
     """Inspect a context window or drill into a specific block.
 
@@ -45,7 +45,7 @@ def inspect_window(
     return _inspect_summary(window, format)
 
 
-def _inspect_summary(window: ContextWindow, format: str) -> str:  # noqa: A002
+def _inspect_summary(window: ContextWindow, format: str) -> str:
     """Render a summary table of all blocks in the window."""
     headers = ["Block", "Type", "Tokens", "Priority", "Budget %", "Origin"]
 
@@ -69,11 +69,7 @@ def _inspect_summary(window: ContextWindow, format: str) -> str:  # noqa: A002
         ]
 
         if window.model_name:
-            cost = (
-                block.token_count
-                * window._input_cost_per_mtok
-                / 1_000_000
-            )
+            cost = block.token_count * window._input_cost_per_mtok / 1_000_000
             row.append(f"${cost:.4f}")
 
         row.extend([budget_pct, origin_str])
@@ -109,9 +105,7 @@ def _inspect_summary(window: ContextWindow, format: str) -> str:  # noqa: A002
     return result
 
 
-def _inspect_block(
-    window: ContextWindow, block_name: str, format: str  # noqa: A002
-) -> str:
+def _inspect_block(window: ContextWindow, block_name: str, format: str) -> str:
     """Drill into a specific block for detailed inspection."""
     from contextkit.core import BlockType
 
@@ -131,16 +125,16 @@ def _inspect_block(
 
     if block.mutations:
         lines.append("Mutations:")
-        for m in block.mutations:
+        for mutation in block.mutations:
             lines.append(
-                f"  [{m.step}] {m.action}: {m.detail} "
-                f"({m.tokens_before:,} -> {m.tokens_after:,} tokens)"
+                f"  [{mutation.step}] {mutation.action}: "
+                f"{mutation.detail} "
+                f"({mutation.tokens_before:,} -> "
+                f"{mutation.tokens_after:,} tokens)"
             )
 
     # Type-specific drill-down
-    if block.type == BlockType.SHORT_TERM_MEMORY and isinstance(
-        block.content, list
-    ):
+    if block.type == BlockType.SHORT_TERM_MEMORY and isinstance(block.content, list):
         lines.append("")
         lines.append("Messages:")
         headers = ["#", "Role", "Tokens", "Content"]
@@ -160,9 +154,7 @@ def _inspect_block(
             )
         lines.append(format_text_table(headers, rows))
 
-    elif block.type == BlockType.RAG and isinstance(
-        block.content, list
-    ):
+    elif block.type == BlockType.RAG and isinstance(block.content, list):
         lines.append("")
         lines.append("Chunks:")
         headers = ["#", "Source", "Tokens", "Relevance", "Content"]
@@ -171,11 +163,7 @@ def _inspect_block(
             content = chunk.get("content", "")
             from contextkit._tokens import count
 
-            chunk_tokens = (
-                count(content)
-                if isinstance(content, str)
-                else 0
-            )
+            chunk_tokens = count(content) if isinstance(content, str) else 0
             source = chunk.get("source", "-")
             relevance = chunk.get("relevance", "-")
             rows.append(
@@ -189,9 +177,7 @@ def _inspect_block(
             )
         lines.append(format_text_table(headers, rows))
 
-    elif block.type == BlockType.TOOL_DEFINITIONS and isinstance(
-        block.content, list
-    ):
+    elif block.type == BlockType.TOOL_DEFINITIONS and isinstance(block.content, list):
         lines.append("")
         lines.append("Tools:")
         headers = ["#", "Name", "Description", "Params"]
@@ -201,13 +187,9 @@ def _inspect_block(
             desc = tool.get("description", "-")
             params = tool.get("parameters", {})
             param_count = (
-                len(params.get("properties", {}))
-                if isinstance(params, dict)
-                else 0
+                len(params.get("properties", {})) if isinstance(params, dict) else 0
             )
-            rows.append(
-                [str(i), name, truncate_content(desc), str(param_count)]
-            )
+            rows.append([str(i), name, truncate_content(desc), str(param_count)])
         lines.append(format_text_table(headers, rows))
 
     elif isinstance(block.content, str):

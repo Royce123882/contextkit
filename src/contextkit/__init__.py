@@ -19,21 +19,16 @@ from contextkit.models import ModelSpec, UnknownModelError
 from contextkit.observe.provenance import Mutation, Origin
 
 __all__ = [
-    # Core
-    "ContextWindow",
-    "ContextBlock",
-    "BlockType",
-    "BudgetExceededError",
-    # Assembler
-    "ContextAssembler",
     "AssemblyReport",
     "BlockDecision",
-    # Models
+    "BlockType",
+    "BudgetExceededError",
+    "ContextAssembler",
+    "ContextBlock",
+    "ContextWindow",
     "ModelSpec",
-    "UnknownModelError",
-    # Provenance
-    "Origin",
     "Mutation",
-    # Version
+    "Origin",
+    "UnknownModelError",
     "__version__",
 ]

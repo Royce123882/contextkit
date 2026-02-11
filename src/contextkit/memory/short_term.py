@@ -37,8 +37,7 @@ class ShortTermMemory:
     ) -> None:
         if strategy not in ("sliding_window", "token_budget"):
             raise ValueError(
-                f"Unknown strategy: {strategy}. "
-                f"Use 'sliding_window' or 'token_budget'."
+                f"Unknown strategy: {strategy}. Use 'sliding_window' or 'token_budget'."
             )
         self._strategy = strategy
         self._max_turns = max_turns
@@ -97,9 +96,7 @@ class ShortTermMemory:
         self._total_turns_added += 1
         self._apply_trimming()
 
-    def add_messages(
-        self, messages: list[dict[str, Any]]
-    ) -> None:
+    def add_messages(self, messages: list[dict[str, Any]]) -> None:
         """Add multiple messages at once.
 
         Args:
@@ -174,8 +171,7 @@ class ShortTermMemory:
         # Then trim by token budget from the oldest
         while (
             self._messages
-            and count_tokens(self._messages, self._encoding)
-            > self._max_tokens
+            and count_tokens(self._messages, self._encoding) > self._max_tokens
         ):
             self._messages.pop(0)
 
@@ -208,15 +204,11 @@ def trim_conversation(
         if len(result) > max_turns:
             result = result[-max_turns:]
         if max_tokens is not None:
-            while (
-                result
-                and count_tokens(result, encoding) > max_tokens
-            ):
+            while result and count_tokens(result, encoding) > max_tokens:
                 result.pop(0)
     else:
         raise ValueError(
-            f"Unknown strategy: {strategy}. "
-            f"Use 'sliding_window' or 'token_budget'."
+            f"Unknown strategy: {strategy}. Use 'sliding_window' or 'token_budget'."
         )
 
     return result

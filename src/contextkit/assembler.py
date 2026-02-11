@@ -79,24 +79,17 @@ class ContextAssembler:
         Returns:
             The ContextWindow with assembled blocks.
         """
-        sorted_blocks = sorted(
-            blocks, key=lambda b: b.priority, reverse=True
-        )
+        sorted_blocks = sorted(blocks, key=lambda b: b.priority, reverse=True)
 
         included: list[BlockDecision] = []
         excluded: list[BlockDecision] = []
 
         for block in sorted_blocks:
             block_tokens = block.token_count
-            origin_summary = (
-                block.origin.summary() if block.origin else "unknown"
-            )
+            origin_summary = block.origin.summary() if block.origin else "unknown"
 
-            if (
-                self._window.token_count + block_tokens
-                <= self._window.max_tokens
-            ):
-                self._window._add_no_check(block)
+            if self._window.token_count + block_tokens <= self._window.max_tokens:
+                self._window.add_unchecked(block)
                 included.append(
                     BlockDecision(
                         block_name=block.display_name,
@@ -126,7 +119,7 @@ class ContextAssembler:
             cost_estimate=self._window.cost_estimate,
         )
 
-        self._window._assembly_report = report
+        self._window.assembly_report = report
 
         # Emit ASSEMBLY_COMPLETE event
         emit(
@@ -142,14 +135,14 @@ class ContextAssembler:
         )
 
         # Check budget warnings after assembly
-        self._window._check_budget_warnings()
+        self._window.check_budget_warnings()
 
         return self._window
 
     @property
     def report(self) -> AssemblyReport | None:
         """The report from the last assembly, if available."""
-        report = self._window._assembly_report
+        report = self._window.assembly_report
         if isinstance(report, AssemblyReport):
             return report
         return None

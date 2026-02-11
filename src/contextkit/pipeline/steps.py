@@ -79,9 +79,7 @@ class PipelineStep(ABC):
         ...
 
     @abstractmethod
-    def process(
-        self, blocks: list[ContextBlock]
-    ) -> list[ContextBlock]:
+    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
         """Process blocks and return the modified list.
 
         Args:
@@ -115,11 +113,11 @@ class TrimStep(PipelineStep):
 
     @property
     def name(self) -> str:
+        """Return the step name."""
         return "TrimStep"
 
-    def process(
-        self, blocks: list[ContextBlock]
-    ) -> list[ContextBlock]:
+    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+        """Remove low-priority blocks and enforce token budget."""
         result: list[ContextBlock] = []
         removed: list[ContextBlock] = []
 
@@ -197,11 +195,11 @@ class FilterStep(PipelineStep):
 
     @property
     def name(self) -> str:
+        """Return the step name."""
         return "FilterStep"
 
-    def process(
-        self, blocks: list[ContextBlock]
-    ) -> list[ContextBlock]:
+    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+        """Filter blocks by relevance score or custom predicate."""
         result: list[ContextBlock] = []
 
         for block in blocks:
@@ -230,10 +228,7 @@ class FilterStep(PipelineStep):
                     and block.origin.relevance_score is not None
                 ):
                     score = str(block.origin.relevance_score)
-                reason = (
-                    f"relevance {score}"
-                    f" below threshold {self._min_relevance}"
-                )
+                reason = f"relevance {score} below threshold {self._min_relevance}"
                 block.mutations.append(
                     Mutation(
                         step=self.name,
@@ -258,22 +253,18 @@ class DeduplicateStep(PipelineStep):
         similarity_threshold: Overlap threshold (0.0-1.0).
     """
 
-    def __init__(
-        self, similarity_threshold: float = 0.8
-    ) -> None:
+    def __init__(self, similarity_threshold: float = 0.8) -> None:
         self._threshold = similarity_threshold
 
     @property
     def name(self) -> str:
+        """Return the step name."""
         return "DeduplicateStep"
 
-    def process(
-        self, blocks: list[ContextBlock]
-    ) -> list[ContextBlock]:
+    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+        """Remove duplicate blocks based on content similarity."""
         # Sort by priority descending so higher-priority kept
-        sorted_blocks = sorted(
-            blocks, key=lambda b: b.priority, reverse=True
-        )
+        sorted_blocks = sorted(blocks, key=lambda b: b.priority, reverse=True)
         result: list[ContextBlock] = []
 
         for block in sorted_blocks:
@@ -282,32 +273,29 @@ class DeduplicateStep(PipelineStep):
                 continue
 
             block_words = set(block.content.lower().split())
-            is_dup = False
+            is_duplicate = False
 
             for existing in result:
                 if not isinstance(existing.content, str):
                     continue
-                existing_words = set(
-                    existing.content.lower().split()
-                )
+                existing_words = set(existing.content.lower().split())
                 if not block_words or not existing_words:
                     continue
 
                 overlap = len(block_words & existing_words)
-                sim = overlap / min(
-                    len(block_words), len(existing_words)
-                )
+                similarity_score = overlap / min(len(block_words), len(existing_words))
 
-                if sim >= self._threshold:
-                    is_dup = True
+                if similarity_score >= self._threshold:
+                    is_duplicate = True
                     block.mutations.append(
                         Mutation(
                             step=self.name,
                             action="removed",
                             detail=(
-                                f'overlaps with '
+                                f"overlaps with "
                                 f'"{existing.display_name}" '
-                                f"({sim:.0%} similarity)"
+                                f"({similarity_score:.0%} "
+                                f"similarity)"
                             ),
                             tokens_before=block.token_count,
                             tokens_after=0,
@@ -315,7 +303,7 @@ class DeduplicateStep(PipelineStep):
                     )
                     break
 
-            if not is_dup:
+            if not is_duplicate:
                 result.append(block)
 
         return result
@@ -338,11 +326,11 @@ class ReorderStep(PipelineStep):
 
     @property
     def name(self) -> str:
+        """Return the step name."""
         return "ReorderStep"
 
-    def process(
-        self, blocks: list[ContextBlock]
-    ) -> list[ContextBlock]:
+    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+        """Reorder blocks using the configured strategy."""
         if len(blocks) <= 2:
             return blocks
 
@@ -350,9 +338,7 @@ class ReorderStep(PipelineStep):
             return self._reorder_edges(blocks)
         return blocks
 
-    def _reorder_edges(
-        self, blocks: list[ContextBlock]
-    ) -> list[ContextBlock]:
+    def _reorder_edges(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
         """Place highest priority at start/end, lowest in middle."""
         sorted_by_priority = sorted(
             enumerate(blocks),
@@ -382,10 +368,7 @@ class ReorderStep(PipelineStep):
                     Mutation(
                         step=self.name,
                         action="moved",
-                        detail=(
-                            f"position {orig_idx} -> "
-                            f"position {new_pos}"
-                        ),
+                        detail=(f"position {orig_idx} -> position {new_pos}"),
                         tokens_before=block.token_count,
                         tokens_after=block.token_count,
                     )
@@ -420,11 +403,11 @@ class CompactStep(PipelineStep):
 
     @property
     def name(self) -> str:
+        """Return the step name."""
         return "CompactStep"
 
-    def process(
-        self, blocks: list[ContextBlock]
-    ) -> list[ContextBlock]:
+    def process(self, blocks: list[ContextBlock]) -> list[ContextBlock]:
+        """Compact long blocks by truncation or custom compactor."""
         result: list[ContextBlock] = []
 
         for block in blocks:
@@ -443,17 +426,12 @@ class CompactStep(PipelineStep):
 
             if tokens_after < tokens_before:
                 # Create a new block with compacted content
-                new_block = block.model_copy(
-                    update={"content": compacted}
-                )
+                new_block = block.model_copy(update={"content": compacted})
                 new_block.mutations.append(
                     Mutation(
                         step=self.name,
                         action="compacted",
-                        detail=(
-                            f"{tokens_before:,} -> "
-                            f"{tokens_after:,} tokens"
-                        ),
+                        detail=(f"{tokens_before:,} -> {tokens_after:,} tokens"),
                         tokens_before=tokens_before,
                         tokens_after=tokens_after,
                         before_content=before_content,
@@ -518,9 +496,7 @@ class ContextPipeline:
             The same ContextWindow (modified in place).
         """
         blocks = list(window.blocks)
-        total_tokens_before = sum(
-            b.token_count for b in blocks
-        )
+        total_tokens_before = sum(b.token_count for b in blocks)
 
         step_reports: list[StepReport] = []
 
@@ -535,12 +511,8 @@ class ContextPipeline:
 
             report = StepReport(
                 step_name=step.name,
-                blocks_modified=abs(
-                    blocks_before_count - blocks_after_count
-                ),
-                blocks_removed=(
-                    blocks_before_count - blocks_after_count
-                ),
+                blocks_modified=abs(blocks_before_count - blocks_after_count),
+                blocks_removed=(blocks_before_count - blocks_after_count),
                 tokens_before=tokens_before,
                 tokens_after=tokens_after,
                 tokens_saved=tokens_before - tokens_after,
@@ -557,32 +529,19 @@ class ContextPipeline:
                 )
             )
 
-        total_tokens_after = sum(
-            b.token_count for b in blocks
-        )
+        total_tokens_after = sum(b.token_count for b in blocks)
 
-        # Replace window blocks
-        window._blocks = blocks
-        window._invalidate_cache()
+        # Replace window blocks via public API
+        window.replace_blocks(blocks)
 
-        cost_before = (
-            total_tokens_before
-            * window._input_cost_per_mtok
-            / 1_000_000
-        )
-        cost_after = (
-            total_tokens_after
-            * window._input_cost_per_mtok
-            / 1_000_000
-        )
+        cost_before = total_tokens_before * window.input_cost_per_mtok / 1_000_000
+        cost_after = total_tokens_after * window.input_cost_per_mtok / 1_000_000
 
         self._last_report = PipelineReport(
             steps=step_reports,
             total_tokens_before=total_tokens_before,
             total_tokens_after=total_tokens_after,
-            total_tokens_saved=(
-                total_tokens_before - total_tokens_after
-            ),
+            total_tokens_saved=(total_tokens_before - total_tokens_after),
             cost_delta=cost_before - cost_after,
         )
 

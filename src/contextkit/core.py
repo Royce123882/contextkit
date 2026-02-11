@@ -81,6 +81,7 @@ class ContextBlock(BaseModel):
         return self.name or self.type.value
 
     def __repr__(self) -> str:
+        """Return a developer-friendly string representation."""
         origin_str = f", origin={self.origin.source}" if self.origin else ""
         return (
             f"ContextBlock(type={self.type.value}, "
@@ -144,9 +145,7 @@ class ContextWindow:
             self._input_cost_per_mtok = 0.0
             self._output_cost_per_mtok = 0.0
         else:
-            raise ValueError(
-                "Either 'model' or 'max_tokens' must be provided."
-            )
+            raise ValueError("Either 'model' or 'max_tokens' must be provided.")
 
         self._blocks: list[ContextBlock] = []
         self._cached_token_count: int | None = None
@@ -180,9 +179,7 @@ class ContextWindow:
     def token_count(self) -> int:
         """Total tokens across all blocks (cached)."""
         if self._cached_token_count is None:
-            self._cached_token_count = sum(
-                b.token_count for b in self._blocks
-            )
+            self._cached_token_count = sum(b.token_count for b in self._blocks)
         return self._cached_token_count
 
     @property
@@ -291,18 +288,12 @@ class ContextWindow:
         Returns:
             A list of message dicts ready for further formatting.
         """
-        sorted_blocks = sorted(
-            self._blocks, key=lambda b: b.priority, reverse=True
-        )
+        sorted_blocks = sorted(self._blocks, key=lambda b: b.priority, reverse=True)
 
         messages: list[dict[str, Any]] = []
         for block in sorted_blocks:
             if isinstance(block.content, str):
-                role = (
-                    "system"
-                    if block.type == BlockType.SYSTEM_PROMPT
-                    else "user"
-                )
+                role = "system" if block.type == BlockType.SYSTEM_PROMPT else "user"
                 messages.append({"role": role, "content": block.content})
             elif isinstance(block.content, list):
                 messages.extend(block.content)
@@ -338,14 +329,8 @@ class ContextWindow:
                     "token_count": b.token_count,
                     "content": b.content,
                     "metadata": b.metadata,
-                    "origin": (
-                        b.origin.model_dump(mode="json")
-                        if b.origin
-                        else None
-                    ),
-                    "mutations": [
-                        m.model_dump(mode="json") for m in b.mutations
-                    ],
+                    "origin": (b.origin.model_dump(mode="json") if b.origin else None),
+                    "mutations": [m.model_dump(mode="json") for m in b.mutations],
                 }
                 for b in self._blocks
             ],
@@ -359,7 +344,7 @@ class ContextWindow:
     def inspect(
         self,
         block_name: str | None = None,
-        format: str = "text",  # noqa: A002
+        format: str = "text",
     ) -> str:
         """Inspect the context window or a specific block.
 
@@ -390,7 +375,7 @@ class ContextWindow:
     def diff(
         self,
         other: ContextWindow,
-        format: str = "text",  # noqa: A002
+        format: str = "text",
     ) -> str:
         """Compare this window with another.
 
@@ -459,8 +444,30 @@ class ContextWindow:
             largest_block_tokens=largest_tokens,
         )
 
-    def _add_no_check(self, block: ContextBlock) -> None:
-        """Add a block without budget checking (used by assembler)."""
+    @property
+    def assembly_report(self) -> Any:
+        """The assembly report, if set by a ContextAssembler."""
+        return self._assembly_report
+
+    @assembly_report.setter
+    def assembly_report(self, report: Any) -> None:
+        """Set the assembly report (called by ContextAssembler)."""
+        self._assembly_report = report
+
+    @property
+    def input_cost_per_mtok(self) -> float:
+        """Input cost per million tokens."""
+        return self._input_cost_per_mtok
+
+    def add_unchecked(self, block: ContextBlock) -> None:
+        """Add a block bypassing the budget check.
+
+        Used by ContextAssembler which manages its own budget
+        logic. Emits a BLOCK_ADDED event.
+
+        Args:
+            block: The block to add.
+        """
         self._blocks.append(block)
         self._invalidate_cache()
 
@@ -473,7 +480,30 @@ class ContextWindow:
             )
         )
 
+    def replace_blocks(self, blocks: list[ContextBlock]) -> None:
+        """Replace all blocks (used by ContextPipeline).
+
+        Args:
+            blocks: The new block list.
+        """
+        self._blocks = list(blocks)
+        self._invalidate_cache()
+
+    def check_budget_warnings(self) -> None:
+        """Run the budget monitor if configured.
+
+        Public entry point for subsystems that modify blocks
+        (e.g. ContextAssembler, ContextPipeline).
+        """
+        self._check_budget_warnings()
+
+    # -- Keep private aliases for backwards compatibility --
+    def _add_no_check(self, block: ContextBlock) -> None:
+        """Delegate to add_unchecked (kept for compatibility)."""
+        self.add_unchecked(block)
+
     def __repr__(self) -> str:
+        """Return a developer-friendly string representation."""
         model_str = self._model_name or "custom"
         return (
             f"ContextWindow(model={model_str!r}, "
@@ -482,4 +512,5 @@ class ContextWindow:
         )
 
     def __len__(self) -> int:
+        """Return the number of blocks in the window."""
         return len(self._blocks)

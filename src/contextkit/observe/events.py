@@ -34,9 +34,7 @@ class EventData(BaseModel):
     """Base class for event payloads."""
 
     event: ContextEvent
-    timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     details: dict[str, Any] = Field(default_factory=dict)
 
     model_config = {"arbitrary_types_allowed": True}
@@ -72,9 +70,10 @@ _handlers: dict[ContextEvent, list[Callable[..., Any]]] = defaultdict(list)
 
 
 def on(event: ContextEvent) -> Callable[..., Any]:
-    """Decorator to register a callback for a context event.
+    """Register a callback for a context event via decorator.
 
-    Usage:
+    Usage::
+
         @on(ContextEvent.BLOCK_ADDED)
         def log_addition(event_data):
             print(f"Added {event_data.block_name}")
@@ -87,9 +86,7 @@ def on(event: ContextEvent) -> Callable[..., Any]:
     return decorator
 
 
-def register_handler(
-    event: ContextEvent, handler: Callable[..., Any]
-) -> None:
+def register_handler(event: ContextEvent, handler: Callable[..., Any]) -> None:
     """Register a callback for a context event (non-decorator form).
 
     Args:

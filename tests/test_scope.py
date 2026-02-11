@@ -128,9 +128,7 @@ class TestContextTimeline:
         tl.record(100, ["a"])
         tl.record(200, ["a", "b"])
 
-        with tempfile.NamedTemporaryFile(
-            suffix=".json", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             path = f.name
 
         try:
@@ -335,21 +333,19 @@ class TestContextScope:
 
     def test_create_with_timeline(self) -> None:
         window = ContextWindow(max_tokens=10000)
-        scope = ContextScope(
-            "agent_a", window, track_history=True
-        )
+        scope = ContextScope("agent_a", window, track_history=True)
         assert scope.timeline is not None
 
     def test_record_turn(self) -> None:
         window = ContextWindow(max_tokens=10000)
-        window.add(ContextBlock(
-            type=BlockType.USER_CONTEXT,
-            content="test",
-            name="block_a",
-        ))
-        scope = ContextScope(
-            "agent_a", window, track_history=True
+        window.add(
+            ContextBlock(
+                type=BlockType.USER_CONTEXT,
+                content="test",
+                name="block_a",
+            )
         )
+        scope = ContextScope("agent_a", window, track_history=True)
         scope.record_turn()
         assert scope.timeline is not None
         assert scope.timeline.current_turn == 1
@@ -362,9 +358,7 @@ class TestContextScope:
 
     def test_record_turn_with_events(self) -> None:
         window = ContextWindow(max_tokens=10000)
-        scope = ContextScope(
-            "agent_a", window, track_history=True
-        )
+        scope = ContextScope("agent_a", window, track_history=True)
         scope.record_turn(events=["block_added"])
         snap = scope.timeline.snapshot_at(1)
         assert snap is not None
@@ -419,11 +413,13 @@ class TestContextScope:
 
     def test_handoff(self) -> None:
         window = ContextWindow(max_tokens=10000)
-        window.add(ContextBlock(
-            type=BlockType.USER_CONTEXT,
-            content="Important data",
-            name="data",
-        ))
+        window.add(
+            ContextBlock(
+                type=BlockType.USER_CONTEXT,
+                content="Important data",
+                name="data",
+            )
+        )
         scope = ContextScope("agent_a", window)
         scope.scratchpad.write("plan", "Step 1")
 
@@ -435,28 +431,28 @@ class TestContextScope:
 
     def test_handoff_specific_blocks(self) -> None:
         window = ContextWindow(max_tokens=10000)
-        window.add(ContextBlock(
-            type=BlockType.USER_CONTEXT,
-            content="Data A",
-            name="block_a",
-        ))
-        window.add(ContextBlock(
-            type=BlockType.USER_CONTEXT,
-            content="Data B",
-            name="block_b",
-        ))
-        scope = ContextScope("agent_a", window)
-        package = scope.handoff(
-            "agent_b", block_names=["block_a"]
+        window.add(
+            ContextBlock(
+                type=BlockType.USER_CONTEXT,
+                content="Data A",
+                name="block_a",
+            )
         )
+        window.add(
+            ContextBlock(
+                type=BlockType.USER_CONTEXT,
+                content="Data B",
+                name="block_b",
+            )
+        )
+        scope = ContextScope("agent_a", window)
+        package = scope.handoff("agent_b", block_names=["block_a"])
         assert package.block_count == 1
 
     def test_handoff_without_scratchpad(self) -> None:
         window = ContextWindow(max_tokens=10000)
         scope = ContextScope("agent_a", window)
-        package = scope.handoff(
-            "agent_b", include_scratchpad=False
-        )
+        package = scope.handoff("agent_b", include_scratchpad=False)
         assert package.scratchpad is None
 
     def test_handoff_with_metadata(self) -> None:
@@ -471,11 +467,13 @@ class TestContextScope:
     def test_receive_handoff(self) -> None:
         # Agent A creates handoff
         window_a = ContextWindow(max_tokens=10000)
-        window_a.add(ContextBlock(
-            type=BlockType.USER_CONTEXT,
-            content="Transfer data",
-            name="transfer",
-        ))
+        window_a.add(
+            ContextBlock(
+                type=BlockType.USER_CONTEXT,
+                content="Transfer data",
+                name="transfer",
+            )
+        )
         scope_a = ContextScope("agent_a", window_a)
         scope_a.scratchpad.write("note", "Important info")
         package = scope_a.handoff("agent_b")
@@ -521,11 +519,13 @@ class TestContextScope:
         )
 
         # Agent A adds blocks and records turns
-        window_a.add(ContextBlock(
-            type=BlockType.USER_CONTEXT,
-            content="Research findings about AI",
-            name="findings",
-        ))
+        window_a.add(
+            ContextBlock(
+                type=BlockType.USER_CONTEXT,
+                content="Research findings about AI",
+                name="findings",
+            )
+        )
         scope_a.scratchpad.write("status", "research_complete")
         scope_a.record_turn()
 

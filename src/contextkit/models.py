@@ -32,8 +32,7 @@ class UnknownModelError(Exception):
     def __init__(self, model_name: str) -> None:
         self.model_name = model_name
         super().__init__(
-            f"Unknown model: '{model_name}'. "
-            f"Use register_model() to add custom models."
+            f"Unknown model: '{model_name}'. Use register_model() to add custom models."
         )
 
 

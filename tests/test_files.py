@@ -152,9 +152,7 @@ class TestFileContext:
     def test_load_with_token_budget(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             for i in range(10):
-                (Path(tmpdir) / f"file_{i}.py").write_text(
-                    "x = 1\n" * 100
-                )
+                (Path(tmpdir) / f"file_{i}.py").write_text("x = 1\n" * 100)
 
             fc = FileContext(tmpdir)
             refs = fc.scan()

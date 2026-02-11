@@ -16,9 +16,7 @@ class TestPromptVersion:
     """Tests for the PromptVersion model."""
 
     def test_create_with_defaults(self) -> None:
-        pv = PromptVersion(
-            name="test", version="1", template="Hello {{name}}"
-        )
+        pv = PromptVersion(name="test", version="1", template="Hello {{name}}")
         assert pv.name == "test"
         assert pv.version == "1"
         assert pv.description == ""
@@ -135,8 +133,10 @@ class TestPromptManager:
         pm.register("base", "You are {{role}}.")
         pm.register("rules", "Rules: {{rules}}")
         block = pm.compose(
-            "base", "rules",
-            role="analyst", rules="Be concise",
+            "base",
+            "rules",
+            role="analyst",
+            rules="Be concise",
         )
         assert "You are analyst." in block.content
         assert "Rules: Be concise" in block.content

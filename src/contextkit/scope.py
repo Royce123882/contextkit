@@ -9,7 +9,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from contextkit.core import BlockType, ContextBlock, ContextWindow
+from contextkit.core import (
+    BlockType,
+    BudgetExceededError,
+    ContextBlock,
+    ContextWindow,
+)
 from contextkit.observe.provenance import Origin
 from contextkit.observe.timeline import ContextTimeline
 
@@ -72,9 +77,7 @@ class Scratchpad:
         Returns:
             A ContextBlock of type SCRATCHPAD.
         """
-        content = "\n".join(
-            f"[{k}] {v}" for k, v in sorted(self._notes.items())
-        )
+        content = "\n".join(f"[{k}] {v}" for k, v in sorted(self._notes.items()))
         return ContextBlock(
             type=BlockType.SCRATCHPAD,
             content=content or "(empty)",
@@ -212,9 +215,7 @@ class ContextScope:
         self._timeline: ContextTimeline | None = None
 
         if track_history:
-            self._timeline = ContextTimeline(
-                max_tokens=window.max_tokens
-            )
+            self._timeline = ContextTimeline(max_tokens=window.max_tokens)
 
     @property
     def agent_name(self) -> str:
@@ -248,18 +249,14 @@ class ContextScope:
             events: Any events that occurred during this turn.
         """
         if self._timeline is not None:
-            block_names = [
-                b.display_name for b in self._window.blocks
-            ]
+            block_names = [b.display_name for b in self._window.blocks]
             self._timeline.record(
                 token_count=self._window.token_count,
                 block_names=block_names,
                 events=events,
             )
 
-    def import_shared(
-        self, block_names: list[str] | None = None
-    ) -> int:
+    def import_shared(self, block_names: list[str] | None = None) -> int:
         """Import blocks from shared memory into the window.
 
         Args:
@@ -273,9 +270,7 @@ class ContextScope:
             return 0
 
         imported = 0
-        blocks_to_import = (
-            block_names or self._shared_memory.list_blocks()
-        )
+        blocks_to_import = block_names or self._shared_memory.list_blocks()
 
         for name in blocks_to_import:
             block = self._shared_memory.read(name)
@@ -283,8 +278,8 @@ class ContextScope:
                 try:
                     self._window.add(block)
                     imported += 1
-                except Exception:
-                    pass  # Skip if budget exceeded
+                except BudgetExceededError:
+                    pass  # Skip blocks that exceed budget
 
         return imported
 
@@ -308,11 +303,7 @@ class ContextScope:
             A HandoffPackage ready for the target agent.
         """
         if block_names is not None:
-            blocks = [
-                b
-                for b in self._window.blocks
-                if b.display_name in block_names
-            ]
+            blocks = [b for b in self._window.blocks if b.display_name in block_names]
         else:
             blocks = list(self._window.blocks)
 
@@ -320,9 +311,7 @@ class ContextScope:
             source_agent=self._agent_name,
             target_agent=target_agent,
             blocks=blocks,
-            scratchpad=(
-                self._scratchpad if include_scratchpad else None
-            ),
+            scratchpad=(self._scratchpad if include_scratchpad else None),
             metadata=metadata or {},
         )
 
@@ -342,7 +331,7 @@ class ContextScope:
             try:
                 self._window.add(block)
                 added += 1
-            except Exception:
+            except BudgetExceededError:
                 pass  # Skip if budget exceeded
 
         # Import scratchpad notes

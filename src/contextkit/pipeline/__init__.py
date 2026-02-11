@@ -18,13 +18,13 @@ from contextkit.pipeline.steps import (
 )
 
 __all__ = [
+    "CompactStep",
     "ContextPipeline",
-    "PipelineStep",
-    "TrimStep",
     "DeduplicateStep",
     "FilterStep",
-    "ReorderStep",
-    "CompactStep",
     "PipelineReport",
+    "PipelineStep",
+    "ReorderStep",
     "StepReport",
+    "TrimStep",
 ]

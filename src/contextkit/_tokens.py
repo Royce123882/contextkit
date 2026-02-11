@@ -26,7 +26,8 @@ _CHARS_PER_TOKEN_ESTIMATE = 4
 
 def _content_hash(content: str) -> int:
     """Return a stable integer hash for content string."""
-    return int(hashlib.md5(content.encode("utf-8")).hexdigest(), 16)
+    digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    return int(digest, 16)
 
 
 def _get_encoder(encoding: str) -> Any:
@@ -79,9 +80,7 @@ def _count_string(text: str, encoding: str) -> int:
     return result
 
 
-def _count_messages(
-    messages: list[dict[str, Any]], encoding: str
-) -> int:
+def _count_messages(messages: list[dict[str, Any]], encoding: str) -> int:
     """Count tokens in a list of message dicts.
 
     Each message is expected to have at least a "content" key.

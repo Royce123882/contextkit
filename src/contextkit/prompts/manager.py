@@ -31,9 +31,7 @@ class PromptVersion(BaseModel):
     name: str
     version: str
     template: str
-    created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     description: str = ""
 
 
@@ -81,14 +79,14 @@ class PromptManager:
         if version is None:
             version = str(len(versions) + 1)
 
-        pv = PromptVersion(
+        prompt_ver = PromptVersion(
             name=name,
             version=version,
             template=template,
             description=description,
         )
-        versions.append(pv)
-        return pv
+        versions.append(prompt_ver)
+        return prompt_ver
 
     def get_template(
         self,
@@ -117,13 +115,11 @@ class PromptManager:
         if version is None:
             return versions[-1]
 
-        for v in versions:
-            if v.version == version:
-                return v
+        for prompt_version in versions:
+            if prompt_version.version == version:
+                return prompt_version
 
-        raise KeyError(
-            f"Version '{version}' not found for template '{name}'"
-        )
+        raise KeyError(f"Version '{version}' not found for template '{name}'")
 
     def render(
         self,
@@ -146,14 +142,14 @@ class PromptManager:
         Returns:
             A ContextBlock with rendered content and Origin.
         """
-        pv = self.get_template(name, version)
-        content = _interpolate(pv.template, variables)
+        resolved_template = self.get_template(name, version)
+        content = _interpolate(resolved_template.template, variables)
 
         origin = Origin(
             source="prompt",
             details={
-                "template": pv.name,
-                "version": pv.version,
+                "template": resolved_template.name,
+                "version": resolved_template.version,
                 "variables": list(variables.keys()),
             },
         )
@@ -189,21 +185,19 @@ class PromptManager:
         Returns:
             A ContextBlock with composed content.
         """
-        base_pv = self.get_template(base_name)
-        override_pv = self.get_template(override_name)
+        base_template = self.get_template(base_name)
+        override_template = self.get_template(override_name)
 
-        base_content = _interpolate(base_pv.template, variables)
-        override_content = _interpolate(
-            override_pv.template, variables
-        )
+        base_content = _interpolate(base_template.template, variables)
+        override_content = _interpolate(override_template.template, variables)
         combined = f"{base_content}{separator}{override_content}"
 
         origin = Origin(
             source="prompt",
             details={
                 "template": f"{base_name}+{override_name}",
-                "base_version": base_pv.version,
-                "override_version": override_pv.version,
+                "base_version": base_template.version,
+                "override_version": override_template.version,
                 "variables": list(variables.keys()),
             },
         )
@@ -227,22 +221,20 @@ class PromptManager:
         Returns:
             A string showing the differences.
         """
-        pv_a = self.get_template(name, version_a)
-        pv_b = self.get_template(name, version_b)
+        template_a = self.get_template(name, version_a)
+        template_b = self.get_template(name, version_b)
 
         lines: list[str] = []
-        lines.append(
-            f"Template '{name}' diff: v{version_a} -> v{version_b}"
-        )
+        lines.append(f"Template '{name}' diff: v{version_a} -> v{version_b}")
 
-        if pv_a.template == pv_b.template:
+        if template_a.template == template_b.template:
             lines.append("No changes in template content.")
         else:
             lines.append(f"--- v{version_a}")
             lines.append(f"+++ v{version_b}")
 
-            lines_a = pv_a.template.splitlines()
-            lines_b = pv_b.template.splitlines()
+            lines_a = template_a.template.splitlines()
+            lines_b = template_b.template.splitlines()
 
             for line in lines_a:
                 if line not in lines_b:
