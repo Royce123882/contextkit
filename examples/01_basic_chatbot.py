@@ -12,7 +12,7 @@ from contextkit.adapters.openai_adapter import OpenAIAdapter
 from contextkit.core import BlockType, ContextBlock, ContextWindow
 from contextkit.memory.short_term import ShortTermMemory
 from contextkit.observe.inspect import inspect_window
-from contextkit.prompts.manager import PromptManager
+from contextkit.prompts.prompt_manager import PromptManager
 
 
 def main() -> None:

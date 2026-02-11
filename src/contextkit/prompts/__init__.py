@@ -4,6 +4,6 @@ Provides template-based prompt management with versioning,
 composition, and automatic Origin population.
 """
 
-from contextkit.prompts.manager import PromptManager
+from contextkit.prompts.prompt_manager import PromptManager
 
 __all__ = ["PromptManager"]

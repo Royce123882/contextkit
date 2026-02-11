@@ -18,7 +18,7 @@ from contextkit.constants import (
 )
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
-from contextkit.rag.backends import Chunk, RetrieverBackend
+from contextkit.rag.chunk import Chunk, RetrieverBackend
 from contextkit.utils.text_similarity import word_overlap_similarity
 
 

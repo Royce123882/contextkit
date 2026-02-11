@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import asyncio
 
-from contextkit.rag.backends import Chunk, InMemoryRetriever, RetrieverBackend
+from contextkit.rag.chunk import Chunk, RetrieverBackend
 from contextkit.rag.context import RAGContext, _deduplicate_chunks
+from contextkit.rag.in_memory_retriever import InMemoryRetriever
 
 
 class TestChunk:

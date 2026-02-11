@@ -5,11 +5,8 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-from contextkit.files.context import (
-    FileContext,
-    FileReference,
-    _chunk_to_budget,
-)
+from contextkit.files.file_context import FileContext, _chunk_to_budget
+from contextkit.files.file_reference import FileReference
 
 
 class TestFileReference:

@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from contextkit.prompts.examples import Example, ExampleStore
-from contextkit.prompts.manager import (
-    PromptManager,
-    PromptVersion,
-    _interpolate,
-)
+from contextkit.prompts.example import Example
+from contextkit.prompts.example_store import ExampleStore
+from contextkit.prompts.prompt_manager import PromptManager, _interpolate
+from contextkit.prompts.prompt_version import PromptVersion
 
 
 class TestPromptVersion:

@@ -15,8 +15,8 @@ from contextkit.constants import (
     PRIORITY_LONG_TERM_MEMORY,
 )
 from contextkit.core import BlockType, ContextBlock
-from contextkit.memory.backends import (
-    InMemoryBackend,
+from contextkit.memory.in_memory_backend import InMemoryBackend
+from contextkit.memory.record import (
     MemoryBackend,
     MemoryRecord,
 )

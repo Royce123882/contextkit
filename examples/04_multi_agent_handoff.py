@@ -11,7 +11,7 @@ Usage:
 import asyncio
 
 from contextkit.core import BlockType, ContextBlock, ContextWindow
-from contextkit.memory.backends import InMemoryBackend
+from contextkit.memory.in_memory_backend import InMemoryBackend
 from contextkit.memory.long_term import LongTermMemory
 from contextkit.observe.inspect import inspect_window
 from contextkit.scope import (
@@ -128,9 +128,7 @@ async def main() -> None:
     # Record another turn after publishing
     research_scope.record_turn(events=["findings_published"])
 
-    print(
-        f"Published findings to shared memory " f"({shared_memory.block_count} blocks)"
-    )
+    print(f"Published findings to shared memory ({shared_memory.block_count} blocks)")
 
     # ---------------------------------------------------------------
     # Step 3: Create handoff package from research to coding agent
@@ -147,7 +145,7 @@ async def main() -> None:
         },
     )
 
-    print(f"\nHandoff created: {handoff.source_agent} -> " f"{handoff.target_agent}")
+    print(f"\nHandoff created: {handoff.source_agent} -> {handoff.target_agent}")
     print(f"  Blocks: {handoff.block_count}")
     print(f"  Metadata: {handoff.metadata}")
 

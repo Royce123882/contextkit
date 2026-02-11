@@ -116,8 +116,7 @@ def main() -> None:
     )
 
     print(
-        f"\nBefore pipeline: {len(window.blocks)} blocks, "
-        f"{window.token_count:,} tokens"
+        f"\nBefore pipeline: {len(window.blocks)} blocks, {window.token_count:,} tokens"
     )
     print(f"Over budget by: {window.token_count - window.max_tokens:,} tokens")
 
@@ -161,8 +160,7 @@ def main() -> None:
                 print(f"    {key}: {value}")
 
     print(
-        f"\nAfter pipeline: {len(window.blocks)} blocks, "
-        f"{window.token_count:,} tokens"
+        f"\nAfter pipeline: {len(window.blocks)} blocks, {window.token_count:,} tokens"
     )
     print(f"Within budget: {window.token_count <= window.max_tokens}")
 
@@ -180,7 +178,7 @@ def main() -> None:
         if block.mutations:
             print(f"\n  {block.display_name}:")
             for mutation in block.mutations:
-                print(f"    [{mutation.step}] {mutation.action}: " f"{mutation.detail}")
+                print(f"    [{mutation.step}] {mutation.action}: {mutation.detail}")
 
     # ---------------------------------------------------------------
     # Step 6: Show final statistics

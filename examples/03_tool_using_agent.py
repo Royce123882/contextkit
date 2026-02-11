@@ -13,8 +13,8 @@ import json
 
 from contextkit.core import BlockType, ContextBlock, ContextWindow
 from contextkit.observe.inspect import inspect_window
-from contextkit.prompts.manager import PromptManager
-from contextkit.tools.registry import ToolRegistry
+from contextkit.prompts.prompt_manager import PromptManager
+from contextkit.tools.tool_registry import ToolRegistry
 
 
 async def main() -> None:
@@ -176,7 +176,7 @@ async def main() -> None:
     print("\n--- Context Window ---")
     print(inspect_window(window))
 
-    print(f"\nTotal: {len(window.blocks)} blocks, " f"{window.token_count:,} tokens")
+    print(f"\nTotal: {len(window.blocks)} blocks, {window.token_count:,} tokens")
 
     # ---------------------------------------------------------------
     # Step 6: Show tool output metadata

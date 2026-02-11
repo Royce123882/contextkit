@@ -6,11 +6,8 @@ import json
 
 import pytest
 
-from contextkit.tools.registry import (
-    ToolDefinition,
-    ToolOutput,
-    ToolRegistry,
-)
+from contextkit.tools.tool_models import ToolDefinition, ToolOutput
+from contextkit.tools.tool_registry import ToolRegistry
 
 
 class TestToolDefinition:

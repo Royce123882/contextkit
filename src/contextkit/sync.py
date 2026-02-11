@@ -15,12 +15,12 @@ from contextkit.constants import (
     PRIORITY_LONG_TERM_MEMORY,
 )
 from contextkit.core import ContextBlock
-from contextkit.memory.backends import (
-    MemoryBackend,
-    MemoryRecord,
-)
 from contextkit.memory.long_term import (
     LongTermMemory as AsyncLongTermMemory,
+)
+from contextkit.memory.record import (
+    MemoryBackend,
+    MemoryRecord,
 )
 
 

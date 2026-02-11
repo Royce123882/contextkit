@@ -1,15 +1,8 @@
-"""Few-shot example store.
-
-Manages canonical input-output pairs for few-shot prompting.
-Supports dynamic selection based on similarity and budget-aware
-example fitting.
-"""
+"""Few-shot example store with selection and budget fitting."""
 
 from __future__ import annotations
 
 from typing import Any, Dict, List, Tuple
-
-from pydantic import BaseModel, Field
 
 from contextkit._tokens import count as count_tokens
 from contextkit.constants import (
@@ -20,30 +13,8 @@ from contextkit.constants import (
 )
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
+from contextkit.prompts.example import Example
 from contextkit.utils.text_similarity import word_overlap_score
-
-
-class Example(BaseModel):
-    """A single few-shot example.
-
-    Attributes:
-        example_id: Unique identifier.
-        input_text: The example input.
-        output_text: The expected output.
-        tags: Categorization tags.
-        metadata: Additional metadata.
-    """
-
-    example_id: str
-    input_text: str
-    output_text: str
-    tags: List[str] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
-    @property
-    def formatted(self) -> str:
-        """Formatted example as input/output pair."""
-        return f"Input: {self.input_text}\nOutput: {self.output_text}"
 
 
 class ExampleStore:

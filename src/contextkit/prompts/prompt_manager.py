@@ -1,39 +1,14 @@
-"""Prompt template management.
-
-Provides versioned prompt templates with variable interpolation,
-prompt composition (base + overrides), and automatic Origin
-population for traceability.
-"""
+"""Prompt template management."""
 
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
 from typing import Any, Dict, List
-
-from pydantic import BaseModel, Field
 
 from contextkit.constants import PRIORITY_SYSTEM_PROMPT
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
-
-
-class PromptVersion(BaseModel):
-    """A versioned prompt template.
-
-    Attributes:
-        name: Template name.
-        version: Version string (e.g. "1.0", "2.1").
-        template: The template string with {{variable}} placeholders.
-        created_at: When this version was created.
-        description: Optional description of this version.
-    """
-
-    name: str
-    version: str
-    template: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    description: str = ""
+from contextkit.prompts.prompt_version import PromptVersion
 
 
 class PromptManager:

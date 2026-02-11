@@ -8,8 +8,9 @@ import tempfile
 
 import pytest
 
-from contextkit.memory.backends import InMemoryBackend, MemoryRecord
+from contextkit.memory.in_memory_backend import InMemoryBackend
 from contextkit.memory.long_term import LongTermMemory
+from contextkit.memory.record import MemoryRecord
 from contextkit.memory.short_term import ShortTermMemory, trim_conversation
 from contextkit.memory.sqlite_backend import SQLiteBackend
 

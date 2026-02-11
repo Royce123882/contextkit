@@ -7,7 +7,8 @@ import os
 import tempfile
 
 from contextkit.core import BlockType, ContextBlock, ContextWindow
-from contextkit.observe.timeline import ContextTimeline, TurnSnapshot
+from contextkit.observe.context_timeline import ContextTimeline
+from contextkit.observe.turn_snapshot import TurnSnapshot
 from contextkit.scope import (
     ContextScope,
     HandoffPackage,

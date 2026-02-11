@@ -12,9 +12,10 @@ import asyncio
 
 from contextkit.core import BlockType, ContextBlock, ContextWindow
 from contextkit.observe.inspect import inspect_window
-from contextkit.prompts.manager import PromptManager
-from contextkit.rag.backends import Chunk, InMemoryRetriever
+from contextkit.prompts.prompt_manager import PromptManager
+from contextkit.rag.chunk import Chunk
 from contextkit.rag.context import RAGContext
+from contextkit.rag.in_memory_retriever import InMemoryRetriever
 
 
 async def main() -> None:
@@ -163,7 +164,7 @@ async def main() -> None:
     print("\n--- Context Window ---")
     print(inspect_window(window))
 
-    print(f"\nTotal: {len(window.blocks)} blocks, " f"{window.token_count:,} tokens")
+    print(f"\nTotal: {len(window.blocks)} blocks, {window.token_count:,} tokens")
 
     # Show provenance for each RAG block
     print("\n--- RAG Provenance ---")

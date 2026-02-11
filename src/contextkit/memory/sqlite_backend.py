@@ -21,7 +21,7 @@ from contextkit.constants import (
     IMPORTANCE_WEIGHT,
     WORD_MATCH_WEIGHT,
 )
-from contextkit.memory.backends import MemoryRecord
+from contextkit.memory.record import MemoryRecord
 from contextkit.utils.text_similarity import word_overlap_score
 
 # SQL statements used by the backend.
@@ -48,7 +48,7 @@ ON CONFLICT(key) DO UPDATE SET
 """
 
 _SELECT_ALL_SQL = (
-    "SELECT key, content, metadata, tags, stored_at, importance" " FROM memory_records"
+    "SELECT key, content, metadata, tags, stored_at, importance FROM memory_records"
 )
 
 _DELETE_SQL = "DELETE FROM memory_records WHERE key = ?"

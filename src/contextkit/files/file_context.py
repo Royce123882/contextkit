@@ -1,8 +1,4 @@
-"""File context for loading files into context blocks.
-
-Provides directory indexing, lazy loading, and chunking by token
-budget. Supports format-aware parsing for markdown, code, and CSV.
-"""
+"""Smart file handling for context injection."""
 
 from __future__ import annotations
 
@@ -11,30 +7,13 @@ import os
 from pathlib import Path
 from typing import List, Tuple
 
-from pydantic import BaseModel
-
 from contextkit._tokens import count as count_tokens
 from contextkit.constants import DEFAULT_ENCODING, DEFAULT_TOP_K, PRIORITY_FILE_CONTEXT
 from contextkit.core import BlockType, ContextBlock
+from contextkit.files.file_reference import FileReference
 from contextkit.observe.provenance import Origin
 
 logger = logging.getLogger("contextkit")
-
-
-class FileReference(BaseModel):
-    """A lightweight pointer to a file without loading its content.
-
-    Attributes:
-        path: Absolute or relative file path.
-        size_bytes: File size in bytes.
-        extension: File extension (e.g. ".py", ".md").
-        name: File name without path.
-    """
-
-    path: str
-    size_bytes: int = 0
-    extension: str = ""
-    name: str = ""
 
 
 class FileContext:
