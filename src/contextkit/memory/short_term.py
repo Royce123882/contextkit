@@ -3,19 +3,26 @@
 Provides conversation history tracking with automatic trimming
 strategies (sliding window, token budget) and standalone utility
 functions for trimming conversations without the full framework.
+
+Uses ``collections.deque`` internally for O(1) left-side removal,
+avoiding the O(n) cost of ``list.pop(0)`` during token-budget trimming.
 """
 
 from __future__ import annotations
 
 import logging
+from collections import deque
 from typing import Any, Dict, List
 
-from contextkit.utils.token_counting import count as count_tokens
 from contextkit.constants import DEFAULT_ENCODING, PRIORITY_SHORT_TERM_MEMORY
 from contextkit.core import BlockType, ContextBlock
+from contextkit.exceptions import InvalidBlockError
 from contextkit.observe.provenance import Origin
+from contextkit.utils.token_counting import count as count_tokens
 
 logger = logging.getLogger("contextkit")
+
+_VALID_STRATEGIES = frozenset({"sliding_window", "token_budget"})
 
 
 class ShortTermMemory:
@@ -30,6 +37,9 @@ class ShortTermMemory:
         max_turns: Maximum number of turns to keep (for sliding_window).
         max_tokens: Maximum token budget for history (for token_budget).
         encoding: Tiktoken encoding name for token counting.
+
+    Raises:
+        InvalidBlockError: If an unknown strategy is provided.
     """
 
     def __init__(
@@ -39,15 +49,16 @@ class ShortTermMemory:
         max_tokens: int | None = None,
         encoding: str = DEFAULT_ENCODING,
     ) -> None:
-        if strategy not in ("sliding_window", "token_budget"):
-            raise ValueError(
-                f"Unknown strategy: {strategy}. Use 'sliding_window' or 'token_budget'."
+        if strategy not in _VALID_STRATEGIES:
+            raise InvalidBlockError(
+                f"Unknown strategy: {strategy}. "
+                f"Use 'sliding_window' or 'token_budget'."
             )
         self._strategy = strategy
         self._max_turns = max_turns
         self._max_tokens = max_tokens
         self._encoding = encoding
-        self._messages: List[Dict[str, Any]] = []
+        self._messages: deque[Dict[str, Any]] = deque()
         self._total_turns_added = 0
 
     @property
@@ -57,7 +68,7 @@ class ShortTermMemory:
 
     @property
     def messages(self) -> List[Dict[str, Any]]:
-        """Current messages after trimming."""
+        """Current messages after trimming (returned as a list copy)."""
         return list(self._messages)
 
     @property
@@ -75,7 +86,7 @@ class ShortTermMemory:
         """Total tokens in current messages."""
         if not self._messages:
             return 0
-        return count_tokens(self._messages, self._encoding)
+        return count_tokens(list(self._messages), self._encoding)
 
     def add_turn(
         self,
@@ -166,27 +177,30 @@ class ShortTermMemory:
             self._trim_token_budget()
 
     def _trim_sliding_window(self) -> None:
-        """Keep only the last max_turns messages."""
-        if len(self._messages) > self._max_turns:
-            excess = len(self._messages) - self._max_turns
-            self._messages = self._messages[excess:]
+        """Keep only the last max_turns messages using O(1) popleft."""
+        while len(self._messages) > self._max_turns:
+            self._messages.popleft()
 
     def _trim_token_budget(self) -> None:
-        """Keep most recent messages that fit within max_tokens."""
+        """Keep most recent messages that fit within max_tokens.
+
+        Uses deque.popleft() for O(1) removal from the front,
+        avoiding the O(n) cost of list.pop(0).
+        """
         if self._max_tokens is None:
             return
 
         # Also apply sliding window if set
-        if len(self._messages) > self._max_turns:
-            excess = len(self._messages) - self._max_turns
-            self._messages = self._messages[excess:]
+        while len(self._messages) > self._max_turns:
+            self._messages.popleft()
 
         # Then trim by token budget from the oldest
         while (
             self._messages
-            and count_tokens(self._messages, self._encoding) > self._max_tokens
+            and count_tokens(list(self._messages), self._encoding)
+            > self._max_tokens
         ):
-            self._messages.pop(0)
+            self._messages.popleft()
 
 
 def trim_conversation(
@@ -198,6 +212,8 @@ def trim_conversation(
 ) -> List[Dict[str, Any]]:
     """Standalone utility to trim a conversation without ShortTermMemory.
 
+    Uses deque internally for O(1) front removal during token-budget trimming.
+
     Args:
         messages: List of message dicts with "role" and "content".
         strategy: "sliding_window" or "token_budget".
@@ -207,21 +223,25 @@ def trim_conversation(
 
     Returns:
         A trimmed copy of the messages list.
+
+    Raises:
+        InvalidBlockError: If an unknown strategy is provided.
     """
-    result = list(messages)
+    result: deque[Dict[str, Any]] = deque(messages)
 
     if strategy == "sliding_window":
-        if len(result) > max_turns:
-            result = result[-max_turns:]
+        while len(result) > max_turns:
+            result.popleft()
     elif strategy == "token_budget":
-        if len(result) > max_turns:
-            result = result[-max_turns:]
+        while len(result) > max_turns:
+            result.popleft()
         if max_tokens is not None:
-            while result and count_tokens(result, encoding) > max_tokens:
-                result.pop(0)
+            while result and count_tokens(list(result), encoding) > max_tokens:
+                result.popleft()
     else:
-        raise ValueError(
-            f"Unknown strategy: {strategy}. Use 'sliding_window' or 'token_budget'."
+        raise InvalidBlockError(
+            f"Unknown strategy: {strategy}. "
+            f"Use 'sliding_window' or 'token_budget'."
         )
 
-    return result
+    return list(result)

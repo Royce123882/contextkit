@@ -64,6 +64,133 @@ class Origin(BaseModel):
         """Turn range for conversation origins."""
         return self.details.get("turn_range")
 
+    @classmethod
+    def from_rag(
+        cls,
+        query: str,
+        retriever: str = "",
+        relevance_score: float = 0.0,
+        **extra_details: Any,
+    ) -> "Origin":
+        """Create an Origin for RAG-retrieved content.
+
+        Args:
+            query: The search query used for retrieval.
+            retriever: Name of the retriever backend.
+            relevance_score: Relevance score from the retriever (0.0-1.0).
+            **extra_details: Additional metadata to include in details.
+
+        Returns:
+            An Origin with source="rag" and populated details.
+        """
+        details: Dict[str, Any] = {
+            "query": query,
+            "retriever": retriever,
+            "relevance_score": relevance_score,
+            **extra_details,
+        }
+        return cls(source="rag", details=details)
+
+    @classmethod
+    def from_file(
+        cls,
+        file_path: str,
+        chunk_index: int = 0,
+        **extra_details: Any,
+    ) -> "Origin":
+        """Create an Origin for file-sourced content.
+
+        Args:
+            file_path: Path to the source file.
+            chunk_index: Index of the chunk within the file.
+            **extra_details: Additional metadata to include in details.
+
+        Returns:
+            An Origin with source="file" and populated details.
+        """
+        details: Dict[str, Any] = {
+            "file_path": file_path,
+            "chunk_index": chunk_index,
+            **extra_details,
+        }
+        return cls(source="file", details=details)
+
+    @classmethod
+    def from_tool(cls, tool_name: str, **extra_details: Any) -> "Origin":
+        """Create an Origin for tool-generated content.
+
+        Args:
+            tool_name: Name of the tool that produced the content.
+            **extra_details: Additional metadata to include in details.
+
+        Returns:
+            An Origin with source="tool" and populated details.
+        """
+        details: Dict[str, Any] = {"tool_name": tool_name, **extra_details}
+        return cls(source="tool", details=details)
+
+    @classmethod
+    def from_prompt(
+        cls,
+        template: str,
+        version: str = "1",
+        **extra_details: Any,
+    ) -> "Origin":
+        """Create an Origin for prompt-template-rendered content.
+
+        Args:
+            template: Name of the prompt template.
+            version: Version string of the template.
+            **extra_details: Additional metadata to include in details.
+
+        Returns:
+            An Origin with source="prompt" and populated details.
+        """
+        details: Dict[str, Any] = {
+            "template": template,
+            "version": version,
+            **extra_details,
+        }
+        return cls(source="prompt", details=details)
+
+    @classmethod
+    def from_memory(
+        cls,
+        key: str,
+        query: str = "",
+        **extra_details: Any,
+    ) -> "Origin":
+        """Create an Origin for memory-retrieved content.
+
+        Args:
+            key: The memory record key.
+            query: The retrieval query used.
+            **extra_details: Additional metadata to include in details.
+
+        Returns:
+            An Origin with source="memory" and populated details.
+        """
+        details: Dict[str, Any] = {"key": key, "query": query, **extra_details}
+        return cls(source="memory", details=details)
+
+    @classmethod
+    def from_conversation(
+        cls,
+        turn_range: str = "",
+        **extra_details: Any,
+    ) -> "Origin":
+        """Create an Origin for conversation-history content.
+
+        Args:
+            turn_range: Range of turns included (e.g. "1-20").
+            **extra_details: Additional metadata to include in details.
+
+        Returns:
+            An Origin with source="conversation" and populated details.
+        """
+        details: Dict[str, Any] = {"turn_range": turn_range, **extra_details}
+        return cls(source="conversation", details=details)
+
     def summary(self) -> str:
         """Return a concise human-readable summary of this origin."""
         parts = [self.source]

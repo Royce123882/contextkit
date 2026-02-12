@@ -1,4 +1,8 @@
-"""Smart file handling for context injection."""
+"""Smart file handling for context injection.
+
+Includes path traversal protection to prevent loading files
+outside the configured base directory.
+"""
 
 from __future__ import annotations
 
@@ -7,11 +11,12 @@ import os
 from pathlib import Path
 from typing import List, Tuple
 
-from contextkit.utils.token_counting import count as count_tokens
 from contextkit.constants import DEFAULT_ENCODING, DEFAULT_TOP_K, PRIORITY_FILE_CONTEXT
 from contextkit.core import BlockType, ContextBlock
+from contextkit.exceptions import PathTraversalError
 from contextkit.files.file_reference import FileReference
 from contextkit.observe.provenance import Origin
+from contextkit.utils.token_counting import count as count_tokens
 
 logger = logging.getLogger("contextkit")
 
@@ -20,7 +25,8 @@ class FileContext:
     """Smart file handling for context injection.
 
     Provides directory indexing (metadata-only), lazy loading
-    with chunking, and automatic Origin population.
+    with chunking, automatic Origin population, and path traversal
+    protection.
 
     Args:
         base_path: Root directory to scan for files.
@@ -33,7 +39,7 @@ class FileContext:
         base_path: str,
         extensions: List[str] | None = None,
     ) -> None:
-        self._base_path = Path(base_path)
+        self._base_path = Path(base_path).resolve()
         self._extensions = extensions
         self._index: List[FileReference] = []
 
@@ -52,6 +58,7 @@ class FileContext:
 
         Stores metadata (path, size, extension) without loading
         file content. Call load() to actually read files.
+        Uses ``followlinks=False`` to prevent symlink traversal attacks.
 
         Returns:
             List of FileReference objects found.
@@ -62,7 +69,7 @@ class FileContext:
         if not self._base_path.exists():
             return []
 
-        for root, _dirs, files in os.walk(self._base_path):
+        for root, _dirs, files in os.walk(self._base_path, followlinks=False):
             for filename in sorted(files):
                 filepath = Path(root) / filename
                 ext = filepath.suffix.lower()
@@ -125,7 +132,7 @@ class FileContext:
         encoding: str = DEFAULT_ENCODING,
         priority: int = PRIORITY_FILE_CONTEXT,
     ) -> List[ContextBlock]:
-        """Load files into ContextBlocks.
+        """Load files into ContextBlocks with path traversal protection.
 
         Reads file content and creates blocks with Origin
         auto-populated. Respects token budget by stopping when
@@ -139,14 +146,23 @@ class FileContext:
 
         Returns:
             List of ContextBlocks with file content.
+
+        Raises:
+            PathTraversalError: If any file path is outside the base directory.
         """
-        logger.info("Loading %d files (budget: %s tokens)", len(refs), max_tokens or "unlimited")
+        logger.info(
+            "Loading %d files (budget: %s tokens)",
+            len(refs),
+            max_tokens or "unlimited",
+        )
         blocks: List[ContextBlock] = []
         total_tokens = 0
 
-        for i, ref in enumerate(refs):
+        for chunk_index, ref in enumerate(refs):
+            validated_path = self._validate_path(ref.path)
+
             try:
-                content = Path(ref.path).read_text(encoding="utf-8")
+                content = validated_path.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError) as exc:
                 logger.debug("Skipped file %s: %s", ref.path, exc)
                 continue
@@ -155,7 +171,6 @@ class FileContext:
 
             if max_tokens is not None:
                 if total_tokens + token_count > max_tokens:
-                    # Try chunking the file
                     remaining = max_tokens - total_tokens
                     if remaining > 0:
                         content = _chunk_to_budget(content, remaining, encoding)
@@ -167,7 +182,7 @@ class FileContext:
                 source="file",
                 details={
                     "file_path": ref.path,
-                    "chunk_index": i,
+                    "chunk_index": chunk_index,
                     "extension": ref.extension,
                     "size_bytes": ref.size_bytes,
                 },
@@ -186,7 +201,9 @@ class FileContext:
             if max_tokens is not None and total_tokens >= max_tokens:
                 break
 
-        logger.info("Loaded %d file blocks (%s tokens)", len(blocks), f"{total_tokens:,}")
+        logger.info(
+            "Loaded %d file blocks (%s tokens)", len(blocks), f"{total_tokens:,}"
+        )
         return blocks
 
     async def aload(
@@ -197,14 +214,16 @@ class FileContext:
         priority: int = PRIORITY_FILE_CONTEXT,
     ) -> List[ContextBlock]:
         """Async version of :meth:`load`."""
-        return self.load(refs, max_tokens=max_tokens, encoding=encoding, priority=priority)
+        return self.load(
+            refs, max_tokens=max_tokens, encoding=encoding, priority=priority
+        )
 
     def load_single(
         self,
         path: str,
         priority: int = PRIORITY_FILE_CONTEXT,
     ) -> ContextBlock:
-        """Load a single file into a ContextBlock.
+        """Load a single file into a ContextBlock with path validation.
 
         Args:
             path: File path to load.
@@ -212,16 +231,19 @@ class FileContext:
 
         Returns:
             A ContextBlock with the file content.
+
+        Raises:
+            PathTraversalError: If the path is outside the base directory.
         """
-        filepath = Path(path)
-        content = filepath.read_text(encoding="utf-8")
+        validated_path = self._validate_path(path)
+        content = validated_path.read_text(encoding="utf-8")
 
         origin = Origin(
             source="file",
             details={
-                "file_path": str(filepath),
-                "extension": filepath.suffix.lower(),
-                "size_bytes": filepath.stat().st_size,
+                "file_path": str(validated_path),
+                "extension": validated_path.suffix.lower(),
+                "size_bytes": validated_path.stat().st_size,
             },
         )
 
@@ -229,7 +251,7 @@ class FileContext:
             type=BlockType.FILES,
             content=content,
             priority=priority,
-            name=f"file_{filepath.name}",
+            name=f"file_{validated_path.name}",
             origin=origin,
         )
 
@@ -240,6 +262,29 @@ class FileContext:
     ) -> ContextBlock:
         """Async version of :meth:`load_single`."""
         return self.load_single(path, priority=priority)
+
+    def _validate_path(self, path: str) -> Path:
+        """Validate that a file path is within the allowed base directory.
+
+        Resolves the path to its absolute canonical form and checks
+        that it is relative to the base directory.
+
+        Args:
+            path: The file path to validate.
+
+        Returns:
+            The resolved Path object.
+
+        Raises:
+            PathTraversalError: If the path escapes the base directory.
+        """
+        resolved = Path(path).resolve()
+        if not resolved.is_relative_to(self._base_path):
+            raise PathTraversalError(
+                attempted_path=str(path),
+                allowed_directory=str(self._base_path),
+            )
+        return resolved
 
 
 def _chunk_to_budget(
@@ -262,7 +307,6 @@ def _chunk_to_budget(
     if count_tokens(content, encoding) <= max_tokens:
         return content
 
-    # Binary search for the right character cutoff
     low, high = 0, len(content)
     while low < high:
         mid = (low + high + 1) // 2

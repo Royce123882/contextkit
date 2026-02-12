@@ -8,7 +8,15 @@ from typing import Any, Dict, List
 from pydantic import BaseModel, Field
 
 from contextkit.utils.token_counting import count as count_tokens
-from contextkit.constants import DEFAULT_ENCODING, PRIORITY_DEFAULT
+from contextkit.constants import (
+    DEFAULT_ENCODING,
+    PRIORITY_DEFAULT,
+    PRIORITY_SYSTEM_PROMPT,
+    PRIORITY_RAG_CHUNK,
+    PRIORITY_TOOL_OUTPUT,
+    PRIORITY_FILE_CONTEXT,
+    PRIORITY_EXAMPLE,
+)
 from contextkit.observe.provenance import Mutation, Origin
 
 
@@ -96,9 +104,199 @@ class ContextBlock(BaseModel):
             f"{origin_str})"
         )
 
+    # ------------------------------------------------------------------
+    # Convenience factory methods
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def system(
+        cls,
+        content: str,
+        *,
+        priority: int = PRIORITY_SYSTEM_PROMPT,
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> "ContextBlock":
+        """Create a SYSTEM_PROMPT block.
+
+        Args:
+            content: The system prompt text.
+            priority: Block priority (defaults to PRIORITY_SYSTEM_PROMPT).
+            name: Optional display name.
+            **kwargs: Additional fields passed to the constructor.
+
+        Returns:
+            A ContextBlock of type SYSTEM_PROMPT.
+        """
+        return cls(
+            type=BlockType.SYSTEM_PROMPT,
+            content=content,
+            priority=priority,
+            name=name or "system_prompt",
+            **kwargs,
+        )
+
+    @classmethod
+    def rag(
+        cls,
+        content: str,
+        *,
+        priority: int = PRIORITY_RAG_CHUNK,
+        origin: Origin | None = None,
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> "ContextBlock":
+        """Create a RAG block.
+
+        Args:
+            content: The retrieved content.
+            priority: Block priority (defaults to PRIORITY_RAG_CHUNK).
+            origin: Optional provenance origin.
+            name: Optional display name.
+            **kwargs: Additional fields passed to the constructor.
+
+        Returns:
+            A ContextBlock of type RAG.
+        """
+        return cls(
+            type=BlockType.RAG,
+            content=content,
+            priority=priority,
+            origin=origin,
+            name=name or "rag",
+            **kwargs,
+        )
+
+    @classmethod
+    def memory(
+        cls,
+        content: str,
+        *,
+        priority: int = PRIORITY_DEFAULT,
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> "ContextBlock":
+        """Create a SHORT_TERM_MEMORY block.
+
+        Args:
+            content: The memory content.
+            priority: Block priority (defaults to PRIORITY_DEFAULT).
+            name: Optional display name.
+            **kwargs: Additional fields passed to the constructor.
+
+        Returns:
+            A ContextBlock of type SHORT_TERM_MEMORY.
+        """
+        return cls(
+            type=BlockType.SHORT_TERM_MEMORY,
+            content=content,
+            priority=priority,
+            name=name or "memory",
+            **kwargs,
+        )
+
+    @classmethod
+    def tool_output(
+        cls,
+        content: str,
+        *,
+        tool_name: str = "",
+        priority: int = PRIORITY_TOOL_OUTPUT,
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> "ContextBlock":
+        """Create a TOOL_OUTPUTS block with auto-populated Origin.
+
+        Args:
+            content: The tool output content.
+            tool_name: Name of the tool that produced the output.
+            priority: Block priority (defaults to PRIORITY_TOOL_OUTPUT).
+            name: Optional display name.
+            **kwargs: Additional fields passed to the constructor.
+
+        Returns:
+            A ContextBlock of type TOOL_OUTPUTS.
+        """
+        origin = Origin.from_tool(tool_name) if tool_name else None
+        return cls(
+            type=BlockType.TOOL_OUTPUTS,
+            content=content,
+            priority=priority,
+            origin=origin,
+            name=name or "tool_output",
+            **kwargs,
+        )
+
+    @classmethod
+    def examples(
+        cls,
+        content: str | List[Dict[str, Any]],
+        *,
+        priority: int = PRIORITY_EXAMPLE,
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> "ContextBlock":
+        """Create an EXAMPLES block.
+
+        Args:
+            content: Example content (string or list of message dicts).
+            priority: Block priority (defaults to PRIORITY_EXAMPLE).
+            name: Optional display name.
+            **kwargs: Additional fields passed to the constructor.
+
+        Returns:
+            A ContextBlock of type EXAMPLES.
+        """
+        return cls(
+            type=BlockType.EXAMPLES,
+            content=content,
+            priority=priority,
+            name=name or "examples",
+            **kwargs,
+        )
+
+    @classmethod
+    def file(
+        cls,
+        content: str,
+        *,
+        file_path: str = "",
+        priority: int = PRIORITY_FILE_CONTEXT,
+        name: str | None = None,
+        **kwargs: Any,
+    ) -> "ContextBlock":
+        """Create a FILES block with auto-populated Origin.
+
+        Args:
+            content: The file content.
+            file_path: Path to the source file (used for Origin).
+            priority: Block priority (defaults to PRIORITY_FILE_CONTEXT).
+            name: Optional display name.
+            **kwargs: Additional fields passed to the constructor.
+
+        Returns:
+            A ContextBlock of type FILES.
+        """
+        origin = Origin.from_file(file_path) if file_path else None
+        return cls(
+            type=BlockType.FILES,
+            content=content,
+            priority=priority,
+            origin=origin,
+            name=name or "file",
+            **kwargs,
+        )
+
 
 class BudgetExceededError(Exception):
-    """Raised when adding a block would exceed the token budget."""
+    """Raised when adding a block would exceed the token budget.
+
+    Attributes:
+        block_name: Name of the block that couldn't fit.
+        block_tokens: Token count of the rejected block.
+        budget_remaining: Tokens remaining before the budget is exhausted.
+        max_tokens: Total token budget of the window.
+    """
 
     def __init__(
         self,
@@ -111,7 +309,13 @@ class BudgetExceededError(Exception):
         self.block_tokens = block_tokens
         self.budget_remaining = budget_remaining
         self.max_tokens = max_tokens
-        super().__init__(
-            f"Block '{block_name}' ({block_tokens:,} tokens) exceeds "
-            f"budget remaining ({budget_remaining:,} / {max_tokens:,} tokens)"
+        message = (
+            f"Block '{block_name}' needs {block_tokens:,} tokens "
+            f"but only {budget_remaining:,} remain (max: {max_tokens:,}).\n"
+            f"Suggestions:\n"
+            f"  - Run a pipeline to free space: "
+            f"ContextPipeline.balanced(max_tokens={max_tokens})\n"
+            f"  - Remove low-priority blocks: window.remove('block_name')\n"
+            f"  - Use window.will_fit(block) to check before adding"
         )
+        super().__init__(message)

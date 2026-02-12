@@ -17,6 +17,13 @@ from contextkit.observe.events import (
     emit,
 )
 from contextkit.pipeline.base import PipelineReport, PipelineStep, StepReport
+from contextkit.pipeline.compact import CompactStep
+from contextkit.pipeline.compress import CompressStep
+from contextkit.pipeline.deduplicate import DeduplicateStep
+from contextkit.pipeline.filter import FilterStep
+from contextkit.pipeline.mask import MaskStep
+from contextkit.pipeline.reorder import ReorderStep
+from contextkit.pipeline.trim import TrimStep
 
 logger = logging.getLogger("contextkit")
 
@@ -35,6 +42,87 @@ class ContextPipeline:
     def __init__(self, steps: List[PipelineStep]) -> None:
         self._steps = steps
         self._last_report: PipelineReport | None = None
+
+    # ------------------------------------------------------------------
+    # Preset factory methods
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def balanced(
+        cls,
+        max_tokens: int | None = None,
+        query: str | None = None,
+    ) -> "ContextPipeline":
+        """Create a balanced pipeline with sensible defaults.
+
+        Deduplicates near-duplicates, filters low-relevance content,
+        trims to budget, and reorders for KV-cache efficiency.
+
+        Args:
+            max_tokens: Token budget for the trim step.
+            query: Optional query for relevance-aware trimming.
+
+        Returns:
+            A ContextPipeline with balanced step configuration.
+        """
+        steps: List[PipelineStep] = [
+            DeduplicateStep(similarity_threshold=0.85),
+            FilterStep(min_relevance=0.3),
+            TrimStep(max_tokens=max_tokens, query=query),
+            ReorderStep(strategy="prefix_stable"),
+        ]
+        return cls(steps)
+
+    @classmethod
+    def aggressive(
+        cls,
+        max_tokens: int | None = None,
+        query: str | None = None,
+    ) -> "ContextPipeline":
+        """Create an aggressive pipeline for maximum compression.
+
+        Applies tight deduplication, strict filtering, IDF compression,
+        budget trimming, observation masking, and cache-friendly reordering.
+
+        Args:
+            max_tokens: Token budget for the trim step.
+            query: Optional query for relevance-aware trimming.
+
+        Returns:
+            A ContextPipeline with aggressive compression settings.
+        """
+        steps: List[PipelineStep] = [
+            DeduplicateStep(similarity_threshold=0.7),
+            FilterStep(min_relevance=0.5),
+            CompressStep(compression_ratio=0.5),
+            TrimStep(max_tokens=max_tokens, query=query),
+            MaskStep(window=3),
+            ReorderStep(strategy="prefix_stable"),
+        ]
+        return cls(steps)
+
+    @classmethod
+    def conservative(
+        cls,
+        max_tokens: int | None = None,
+    ) -> "ContextPipeline":
+        """Create a conservative pipeline with minimal changes.
+
+        Only deduplicates near-exact matches and trims to budget.
+        Preserves most content with minimal information loss.
+
+        Args:
+            max_tokens: Token budget for the trim step.
+
+        Returns:
+            A ContextPipeline with conservative settings.
+        """
+        steps: List[PipelineStep] = [
+            DeduplicateStep(similarity_threshold=0.95),
+            TrimStep(max_tokens=max_tokens),
+            ReorderStep(strategy="important_edges"),
+        ]
+        return cls(steps)
 
     @property
     def steps(self) -> List[PipelineStep]:

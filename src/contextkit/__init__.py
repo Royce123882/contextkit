@@ -8,6 +8,7 @@ formatting.
 
 __version__ = "0.1.0"
 
+from contextkit.adapters import AnthropicAdapter, OpenAIAdapter
 from contextkit.assembler import AssemblyReport, BlockDecision, ContextAssembler
 from contextkit.core import (
     BlockType,
@@ -15,22 +16,72 @@ from contextkit.core import (
     ContextBlock,
     ContextWindow,
 )
+from contextkit.files import FileContext
 from contextkit.logging import configure_logging, enable_debug, silence
+from contextkit.memory import LongTermMemory, ShortTermMemory
 from contextkit.models import ModelSpec, UnknownModelError
 from contextkit.observe.provenance import Mutation, Origin
+from contextkit.pipeline import (
+    CompactStep,
+    CompressStep,
+    ContextPipeline,
+    DeduplicateStep,
+    FilterStep,
+    MaskStep,
+    PipelineStep,
+    RAGCompressStep,
+    ReorderStep,
+    TrimStep,
+)
+from contextkit.prompts import PromptManager
+from contextkit.rag import RAGContext
+from contextkit.scope import ContextScope, HandoffPackage, Scratchpad, SharedMemory
+from contextkit.tools import ToolRegistry
 
 __all__ = [
-    "AssemblyReport",
-    "BlockDecision",
+    # Core
     "BlockType",
     "BudgetExceededError",
-    "ContextAssembler",
     "ContextBlock",
     "ContextWindow",
+    # Assembler
+    "AssemblyReport",
+    "BlockDecision",
+    "ContextAssembler",
+    # Adapters
+    "AnthropicAdapter",
+    "OpenAIAdapter",
+    # Pipeline
+    "CompactStep",
+    "CompressStep",
+    "ContextPipeline",
+    "DeduplicateStep",
+    "FilterStep",
+    "MaskStep",
+    "PipelineStep",
+    "RAGCompressStep",
+    "ReorderStep",
+    "TrimStep",
+    # Memory
+    "LongTermMemory",
+    "ShortTermMemory",
+    # Managers
+    "FileContext",
+    "PromptManager",
+    "RAGContext",
+    "ToolRegistry",
+    # Multi-agent
+    "ContextScope",
+    "HandoffPackage",
+    "Scratchpad",
+    "SharedMemory",
+    # Models
     "ModelSpec",
+    "UnknownModelError",
+    # Provenance
     "Mutation",
     "Origin",
-    "UnknownModelError",
+    # Logging
     "__version__",
     "configure_logging",
     "enable_debug",

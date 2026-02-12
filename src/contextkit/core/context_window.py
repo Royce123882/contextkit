@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import copy
 import logging
+from collections.abc import Callable
 from typing import Any, Dict, List, Tuple
 
 from contextkit.utils.cache import clear_token_cache
@@ -135,7 +137,7 @@ class ContextWindow:
         output_cost = output_tokens * self._output_cost_per_mtok / 1_000_000
         return input_cost + output_cost
 
-    def add(self, block: ContextBlock) -> None:
+    def add(self, block: ContextBlock) -> "ContextWindow":
         """Add a context block to the window.
 
         Raises BudgetExceededError if the block would overflow the budget.
@@ -143,6 +145,9 @@ class ContextWindow:
 
         Args:
             block: The block to add.
+
+        Returns:
+            This ContextWindow instance for method chaining.
         """
         block_tokens = block.token_count
         if self.token_count + block_tokens > self._max_tokens:
@@ -158,6 +163,7 @@ class ContextWindow:
             f"{block_tokens:,}",
             block.priority,
         )
+        return self
 
     def remove(self, name: str) -> None:
         """Remove a block by name.
@@ -319,6 +325,56 @@ class ContextWindow:
                 return block
         return None
 
+    def will_fit(self, block: ContextBlock) -> bool:
+        """Check whether a block would fit within the remaining token budget.
+
+        Does not add the block; this is a dry-run check.
+
+        Args:
+            block: The block to test.
+
+        Returns:
+            True if the block's tokens fit within the remaining budget.
+        """
+        return block.token_count <= self.budget_remaining
+
+    def blocks_of_type(self, block_type: BlockType) -> List[ContextBlock]:
+        """Return all blocks matching the given type.
+
+        Args:
+            block_type: The BlockType to filter by.
+
+        Returns:
+            List of matching ContextBlocks (may be empty).
+        """
+        return [b for b in self._blocks if b.type == block_type]
+
+    def find_blocks(self, predicate: Callable[[ContextBlock], bool]) -> List[ContextBlock]:
+        """Return all blocks matching a predicate function.
+
+        Args:
+            predicate: A callable that accepts a ContextBlock and returns True to include it.
+
+        Returns:
+            List of matching ContextBlocks.
+        """
+        return [b for b in self._blocks if predicate(b)]
+
+    def clone(self) -> "ContextWindow":
+        """Create a deep copy of this window with the same configuration and blocks.
+
+        Returns:
+            A new ContextWindow with deeply copied blocks.
+        """
+        new_window = ContextWindow(max_tokens=self._max_tokens)
+        new_window._model_name = self._model_name
+        new_window._encoding = self._encoding
+        new_window._input_cost_per_mtok = self._input_cost_per_mtok
+        new_window._output_cost_per_mtok = self._output_cost_per_mtok
+        for block in self._blocks:
+            new_window.add_unchecked(copy.deepcopy(block))
+        return new_window
+
     def _invalidate_cache(self) -> None:
         """Invalidate the cached token count."""
         self._cached_token_count = None
@@ -366,7 +422,7 @@ class ContextWindow:
         """Input cost per million tokens."""
         return self._input_cost_per_mtok
 
-    def add_unchecked(self, block: ContextBlock) -> None:
+    def add_unchecked(self, block: ContextBlock) -> "ContextWindow":
         """Add a block bypassing the budget check.
 
         Used by ContextAssembler which manages its own budget
@@ -374,10 +430,14 @@ class ContextWindow:
 
         Args:
             block: The block to add.
+
+        Returns:
+            This ContextWindow instance for method chaining.
         """
         self._blocks.append(block)
         self._invalidate_cache()
         self._emit_block_added_event(block)
+        return self
 
     def _raise_budget_exceeded(self, block: ContextBlock, block_tokens: int) -> None:
         """Emit a BUDGET_EXCEEDED event and raise BudgetExceededError."""
