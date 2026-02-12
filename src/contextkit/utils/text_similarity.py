@@ -8,6 +8,7 @@ memory retrieval, and tool selection.
 
 from __future__ import annotations
 
+import re
 from typing import Set
 
 
@@ -110,8 +111,6 @@ def extract_key_sentences(
 
 def _split_sentences(text: str) -> list[str]:
     """Split text into sentences on period/question/exclamation boundaries."""
-    import re
-
     sentences = re.split(r"(?<=[.!?])\s+", text.strip())
     return [s for s in sentences if s.strip()]
 

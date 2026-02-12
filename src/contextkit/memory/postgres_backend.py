@@ -218,7 +218,7 @@ class PostgresBackend:
         if tags:
             conditions = []
             for i, tag in enumerate(tags, start=1):
-                conditions.append(f"tags @> ${ i }::jsonb")
+                conditions.append(f"tags @> ${i}::jsonb")
                 params.append(json.dumps([tag]))
             sql += " WHERE " + " AND ".join(conditions)
 
@@ -287,7 +287,7 @@ class PostgresBackend:
         if tags:
             conditions = []
             for i, tag in enumerate(tags, start=1):
-                conditions.append(f"tags @> ${ i }::jsonb")
+                conditions.append(f"tags @> ${i}::jsonb")
                 params.append(json.dumps([tag]))
             sql += " WHERE " + " AND ".join(conditions)
 

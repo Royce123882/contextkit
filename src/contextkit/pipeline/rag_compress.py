@@ -37,8 +37,8 @@ class RAGCompressStep(PipelineStep):
     3. Records a :class:`Mutation` with before/after token counts.
 
     Args:
-        compressor: Optional custom function ``(text) -> text`` to
-            replace the default extractive compressor.
+        compressor: Optional custom function ``(text, query) -> text``
+            to replace the default extractive compressor.
         max_sentences: Maximum sentences to keep per RAG block.
         drop_threshold: Minimum relevance score to keep a RAG block.
             Blocks below this are removed entirely.

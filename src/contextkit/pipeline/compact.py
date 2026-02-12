@@ -93,11 +93,11 @@ class CompactStep(PipelineStep):
         keyword_retention = word_overlap_score(before_content, compacted)
         info_loss = 1.0 - keyword_retention
 
-        collapse_warning = ""
+        collapse_detail = ""
         if info_loss > self._max_info_loss:
-            collapse_warning = (
-                f" [COLLAPSE WARNING: keyword retention {keyword_retention:.0%}, "
-                f"loss {info_loss:.0%} exceeds threshold {self._max_info_loss:.0%}]"
+            collapse_detail = (
+                f" [COLLAPSE WARNING: keyword retention {keyword_retention:.0%},"
+                f" loss {info_loss:.0%} exceeds threshold {self._max_info_loss:.0%}]"
             )
             logger.warning(
                 "Collapse detected in block '%s': keyword retention %.0f%%, "
@@ -115,7 +115,7 @@ class CompactStep(PipelineStep):
                 action="compacted",
                 detail=(
                     f"{tokens_before:,} -> {tokens_after:,} tokens"
-                    f"{collapse_warning}"
+                    f"{collapse_detail}"
                 ),
                 tokens_before=tokens_before,
                 tokens_after=tokens_after,

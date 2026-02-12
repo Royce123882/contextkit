@@ -25,6 +25,9 @@ DEFAULT_TOKEN_CACHE_SIZE: int = 4096
 # ---------------------------------------------------------------------------
 # Higher priority = more likely to be retained during budget trimming.
 
+MAX_PRIORITY: int = 100
+"""Maximum priority value on the 0-100 scale."""
+
 PRIORITY_SYSTEM_PROMPT: int = 100
 """Priority for system prompt blocks (highest)."""
 

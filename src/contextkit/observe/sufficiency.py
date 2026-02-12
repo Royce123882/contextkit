@@ -75,6 +75,9 @@ class SufficiencyChecker:
         confidence = self._compute_confidence(
             coverage, avg_relevance, len(source_types)
         )
+        # avg_relevance == 0.0 means no RAG blocks are present, so the
+        # relevance gate is skipped — non-RAG contexts should not fail
+        # the sufficiency check due to a missing signal.
         sufficient = (
             coverage >= self._min_coverage
             and (avg_relevance >= self._min_relevance or avg_relevance == 0.0)

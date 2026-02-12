@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import List, Tuple
 
-from contextkit.constants import DEFAULT_RELEVANCE_WEIGHT
+from contextkit.constants import DEFAULT_RELEVANCE_WEIGHT, MAX_PRIORITY
 from contextkit.core import ContextBlock
 from contextkit.observe.provenance import Mutation
 from contextkit.pipeline.base import PipelineStep
@@ -103,8 +103,7 @@ class TrimStep(PipelineStep):
         When no query is set, returns normalized priority (0-1).
         When a query is set, blends priority and relevance.
         """
-        max_priority = 100
-        normalized_priority = min(block.priority / max_priority, 1.0)
+        normalized_priority = min(block.priority / MAX_PRIORITY, 1.0)
 
         if self._query is None:
             return normalized_priority

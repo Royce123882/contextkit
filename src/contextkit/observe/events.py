@@ -32,7 +32,7 @@ class ContextEvent(enum.Enum):
     PIPELINE_STEP = "pipeline_step"
     PIPELINE_COMPLETE = "pipeline_complete"
     WINDOW_RENDERED = "window_rendered"
-    CONTEXT_INSUFFICIENT = "context_insufficient"
+    CONTEXT_INSUFFICIENT = "context_insufficient"  # emitted by SufficiencyChecker
 
 
 class EventData(BaseModel):
