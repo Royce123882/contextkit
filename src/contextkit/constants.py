@@ -121,11 +121,11 @@ DEFAULT_RELEVANCE_WEIGHT: float = 0.5
 """Default weight for relevance vs. priority in query-aware pruning."""
 
 # ---------------------------------------------------------------------------
-# Compression Defaults
+# Compaction Storage
 # ---------------------------------------------------------------------------
 
-DEFAULT_COMPRESSION_RATIO: float = 0.5
-"""Default compression ratio for the CompressStep (0.0-1.0)."""
+DEFAULT_COMPACTION_STORAGE_DIR: str = ".contextkit/compacted"
+"""Default directory for local compaction artifact storage."""
 
 # ---------------------------------------------------------------------------
 # Context Quality Scoring

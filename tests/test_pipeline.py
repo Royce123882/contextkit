@@ -1,16 +1,16 @@
 """Tests for the context pipeline: trim, filter, deduplicate, reorder,
-compact, compress, RAG compress, mask, and the pipeline orchestrator.
+compact, RAG compress, mask, and the pipeline orchestrator.
 """
 
 from __future__ import annotations
 
 import pytest
 
+from contextkit.compaction.store import LocalCompactionStore
 from contextkit.core import BlockType, ContextBlock, ContextWindow
 from contextkit.observe.provenance import Origin
 from contextkit.pipeline import (
     CompactStep,
-    CompressStep,
     ContextPipeline,
     DeduplicateStep,
     FilterStep,
@@ -307,19 +307,18 @@ class TestReorderStep:
 
 
 class TestCompactStep:
-    """Tests for the CompactStep."""
+    """Tests for the CompactStep with LLM compaction and truncation fallback."""
 
-    def test_compacts_long_content(self) -> None:
+    def test_fallback_truncation_when_no_llm(self) -> None:
         step = CompactStep(min_tokens=5, target_ratio=0.3)
         blocks = [
             _make_block("long", content="word " * 200),
         ]
         result = step.process(blocks)
         assert len(result) == 1
-        # Content should be shorter
         assert len(result[0].content) < len("word " * 200)
 
-    def test_skips_short_content(self) -> None:
+    def test_skips_short_blocks(self) -> None:
         step = CompactStep(min_tokens=1000)
         original = "Short text"
         blocks = [_make_block("short", content=original)]
@@ -343,6 +342,87 @@ class TestCompactStep:
         ]
         result = step.process(blocks)
         assert result[0].content == "This is a "
+
+    def test_compacts_with_llm_and_saves_original(self, tmp_path) -> None:
+        store = LocalCompactionStore(base_dir=str(tmp_path / "compacted"))
+
+        def mock_llm(prompt: str) -> str:
+            return "Summary: key terms [1] and details [2]."
+
+        content = "First paragraph about key terms.\n\nSecond paragraph about details."
+        step = CompactStep(
+            llm=mock_llm,
+            store=store,
+            min_tokens=1,
+            max_info_loss=1.0,
+        )
+        blocks = [_make_block("llm_test", content=content)]
+        result = step.process(blocks)
+        assert result[0].content == "Summary: key terms [1] and details [2]."
+
+    def test_metadata_contains_compaction_ref(self, tmp_path) -> None:
+        store = LocalCompactionStore(base_dir=str(tmp_path / "compacted"))
+
+        def mock_llm(prompt: str) -> str:
+            return "Short summary [1]."
+
+        content = "A long block of text.\n\nWith multiple paragraphs of content."
+        step = CompactStep(
+            llm=mock_llm,
+            store=store,
+            min_tokens=1,
+            max_info_loss=1.0,
+        )
+        blocks = [_make_block("ref_test", content=content)]
+        result = step.process(blocks)
+        assert "compaction_ref" in result[0].metadata
+
+    def test_mutation_detail_includes_store_reference(self, tmp_path) -> None:
+        store = LocalCompactionStore(base_dir=str(tmp_path / "compacted"))
+
+        def mock_llm(prompt: str) -> str:
+            return "Brief [1]."
+
+        content = "Original text here.\n\nMore original text here."
+        step = CompactStep(
+            llm=mock_llm,
+            store=store,
+            min_tokens=1,
+            max_info_loss=1.0,
+        )
+        blocks = [_make_block("mutation_ref", content=content)]
+        result = step.process(blocks)
+        assert len(result[0].mutations) == 1
+        assert "ref:" in result[0].mutations[0].detail
+
+    def test_numbered_paragraphs_in_saved_markdown(self, tmp_path) -> None:
+        store = LocalCompactionStore(base_dir=str(tmp_path / "compacted"))
+        saved_content = None
+
+        original_save = store.save
+
+        async def capture_save(key, content, metadata=None):
+            nonlocal saved_content
+            saved_content = content
+            return await original_save(key, content, metadata)
+
+        store.save = capture_save
+
+        def mock_llm(prompt: str) -> str:
+            return "Summary [1] [2]."
+
+        content = "First section content.\n\nSecond section content."
+        step = CompactStep(
+            llm=mock_llm,
+            store=store,
+            min_tokens=1,
+            max_info_loss=1.0,
+        )
+        blocks = [_make_block("numbered_test", content=content)]
+        step.process(blocks)
+        assert saved_content is not None
+        assert "## [1]" in saved_content
+        assert "## [2]" in saved_content
 
     def test_skips_non_string_content(self) -> None:
         step = CompactStep(min_tokens=1)
@@ -790,79 +870,6 @@ class TestRAGCompressionStep:
         """The step name should identify this as a RAG compression step."""
         step = RAGCompressStep()
         assert step.name == "RAGCompressStep"
-
-
-# ---------------------------------------------------------------------------
-# Token-level prompt compression
-# ---------------------------------------------------------------------------
-
-
-class TestTokenLevelCompressionStep:
-    """CompressStep prunes low-information tokens to reduce block size."""
-
-    def test_compresses_block_above_minimum_threshold(self) -> None:
-        """Blocks exceeding min_tokens should be compressed to the target ratio."""
-        compress_step = CompressStep(compression_ratio=0.5, min_tokens=5)
-        long_content = " ".join(f"word{i}" for i in range(100))
-        block = _make_block("long_block", content=long_content)
-        result = compress_step.process([block])
-        assert len(result) == 1
-        assert len(result[0].content) < len(long_content)
-
-    def test_skips_block_below_minimum_threshold(self) -> None:
-        """Blocks shorter than min_tokens pass through unchanged."""
-        compress_step = CompressStep(min_tokens=1000)
-        short_block = _make_block("short_block", content="hello world")
-        result = compress_step.process([short_block])
-        assert result[0].content == "hello world"
-
-    def test_records_compression_mutation(self) -> None:
-        """Compressed blocks carry a 'compressed' mutation with token counts."""
-        compress_step = CompressStep(compression_ratio=0.3, min_tokens=5)
-        long_content = " ".join(f"word{i}" for i in range(100))
-        block = _make_block("long_block", content=long_content)
-        result = compress_step.process([block])
-        assert any(m.action == "compressed" for m in result[0].mutations)
-
-    def test_preserves_start_and_end_tokens(self) -> None:
-        """Positional boosting should preserve tokens at the edges of the text."""
-        compress_step = CompressStep(compression_ratio=0.3, min_tokens=5)
-        content = "START " + " ".join(f"mid{i}" for i in range(50)) + " END"
-        block = _make_block("edge_test", content=content)
-        result = compress_step.process([block])
-        compressed_content = result[0].content
-        assert "START" in compressed_content or "END" in compressed_content
-
-    def test_uses_custom_token_scorer(self) -> None:
-        """A user-supplied scorer function replaces the default IDF scorer."""
-        def uniform_scorer(tokens):
-            return [1.0] * len(tokens)
-
-        compress_step = CompressStep(
-            compression_ratio=0.5,
-            min_tokens=5,
-            scorer=uniform_scorer,
-        )
-        content = " ".join(f"word{i}" for i in range(50))
-        block = _make_block("uniform_score_block", content=content)
-        result = compress_step.process([block])
-        assert len(result) == 1
-
-    def test_skips_non_string_content(self) -> None:
-        """Non-string content (e.g. message lists) passes through unchanged."""
-        compress_step = CompressStep(min_tokens=1)
-        message_block = ContextBlock(
-            type=BlockType.SHORT_TERM_MEMORY,
-            content=[{"role": "user", "content": "hi"}],
-            name="conversation_messages",
-        )
-        result = compress_step.process([message_block])
-        assert result[0].content == [{"role": "user", "content": "hi"}]
-
-    def test_step_name_is_descriptive(self) -> None:
-        """The step name should identify this as a compression step."""
-        step = CompressStep()
-        assert step.name == "CompressStep"
 
 
 # ---------------------------------------------------------------------------

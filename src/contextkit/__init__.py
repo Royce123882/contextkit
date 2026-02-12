@@ -28,9 +28,9 @@ from contextkit.memory import LongTermMemory, ShortTermMemory
 from contextkit.models import ModelSpec, UnknownModelError
 from contextkit.observe import QualityScorer, SufficiencyChecker
 from contextkit.observe.provenance import Mutation, Origin
+from contextkit.compaction import CompactionStore, LocalCompactionStore
 from contextkit.pipeline import (
     CompactStep,
-    CompressStep,
     ContextPipeline,
     DeduplicateStep,
     FilterStep,
@@ -61,9 +61,11 @@ __all__ = [
     "LiteLLMAdapter",
     "OllamaAdapter",
     "OpenAIAdapter",
+    # Compaction
+    "CompactionStore",
+    "LocalCompactionStore",
     # Pipeline
     "CompactStep",
-    "CompressStep",
     "ContextPipeline",
     "DeduplicateStep",
     "FilterStep",
