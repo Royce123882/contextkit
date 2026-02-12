@@ -275,26 +275,36 @@ n8n / similar       → Workflow engine
 
 - Core data models (BlockType, ContextBlock, Origin, Mutation)
 - ContextWindow with token tracking, budget enforcement, cost estimation
-- Token counting with LRU caching (tiktoken-based)
+- Token counting with bounded LRU caching (tiktoken-based, maxsize=4096)
 - Model registry (Claude Opus/Sonnet/Haiku, GPT-4o/mini, GPT-4.1)
 - Provider adapters (Anthropic, OpenAI)
 - Full observability: `inspect()`, `explain()`, `diff()`, `timeline()`
 - ShortTermMemory (sliding_window, token_budget strategies)
-- LongTermMemory with pluggable backends (InMemory, SQLite, Postgres)
+- LongTermMemory with pluggable backends (InMemory, SQLite, Postgres with connection pooling)
 - PromptManager with Jinja2 templates, FileContext with lazy loading
 - ToolRegistry with dynamic selection, RAGContext with 5 retriever backends
-- Full pipeline: Trim, Compact, Deduplicate, Filter, Reorder, Compress
+- Pipeline steps: Trim (with query-aware mode), Compact, Compress (IDF-based), Deduplicate, Filter, Reorder (with prefix-stable KV cache strategy), RAGCompress, Mask
+- Quality scoring (positional attention model) and sufficiency checking
 - Multi-agent: ContextScope, SharedMemory, HandoffPackage, Scratchpad, Timeline
-- 90% test coverage target, strict mypy, CI/CD via GitHub Actions
+- 22 test files, 621+ tests, 90% coverage target enforced, strict mypy, CI/CD via GitHub Actions
 
-### Current Gaps
+### Current Gaps (Verified Against Source Code)
 
-| Category | Issue |
-|----------|-------|
-| **Performance** | O(n^2) message trimming in ShortTermMemory; SQLiteBackend loads all records into memory |
-| **Security** | FileContext lacks path traversal validation |
-| **Async** | sync-to-async bridge can deadlock; no pagination in memory backends |
-| **Docs** | Sphinx RTD exists but incomplete; missing production deployment guide |
+| Category | Issue | Severity | Status |
+|----------|-------|----------|--------|
+| **Performance** | O(n^2) message trimming in ShortTermMemory (`pop(0)` in loop at `short_term.py:189,221`) | HIGH | Confirmed |
+| **Performance** | SQLiteBackend `retrieve()` loads ALL records via `_fetch_all_records()` then filters in Python (`sqlite_backend.py:212`) | HIGH | Confirmed |
+| **Security** | FileContext `load()`/`load_single()` reads arbitrary paths with no traversal validation (`file_context.py:150,234`) | CRITICAL | Confirmed |
+| **Async** | sync-to-async bridge uses ThreadPoolExecutor anti-pattern with deadlock risk (`sync.py:37-39`) | HIGH | Confirmed |
+| **Async** | No pagination (limit/offset) in any memory backend's `list_records()` | MEDIUM | Confirmed |
+| **Docs** | Sphinx RTD has only scaffolding (`conf.py`, `index.rst`, `getting-started.rst`); no advanced guides | MEDIUM | Confirmed |
+
+#### Already Fixed (Previously Reported as Gaps)
+
+| Claim | Actual Status | Evidence |
+|-------|---------------|----------|
+| PostgresBackend lacks connection pooling | **FIXED** -- uses `asyncpg.create_pool()` with configurable min/max sizes | `postgres_backend.py:129-146` |
+| Token counting cache is unbounded | **FIXED** -- uses `LRUCache(maxsize=4096)` | `utils/cache.py:16-17`, `constants.py:20` |
 
 ---
 
@@ -312,21 +322,21 @@ n8n / similar       → Workflow engine
 
 ### B. Performance & Scalability
 
-| Issue | Fix |
-|-------|-----|
-| O(n^2) message trimming | Use `collections.deque(maxlen=N)` |
-| SQLite loads entire DB | Push filtering into SQL WHERE, add LIMIT/OFFSET |
-| No connection pooling | Add persistent connections + pool for concurrent requests |
-| Unbounded token cache | Document cache limits; add `clear_cache()` |
+| Issue | Fix | Status |
+|-------|-----|--------|
+| O(n^2) message trimming | Use `collections.deque(maxlen=N)` | Open |
+| SQLite loads entire DB | Push filtering into SQL WHERE, add LIMIT/OFFSET | Open |
+| ~~No connection pooling~~ | ~~Add persistent connections + pool~~ | **Already fixed** (PostgresBackend uses `asyncpg.create_pool`) |
+| ~~Unbounded token cache~~ | ~~Document cache limits~~ | **Already fixed** (`LRUCache(maxsize=4096)`) |
 
 ### C. Observability Gaps
 
-| Issue | Fix |
-|-------|-----|
-| Inconsistent Origin population | Enforce Origin creation through manager constructors only |
-| No intermediate pipeline states | Optional step-by-step snapshots |
-| No context quality metrics | Add signal-to-noise ratio scoring |
-| Coarse timeline snapshots | Option for detailed block-level diffs per turn |
+| Issue | Fix | Status |
+|-------|-----|--------|
+| Inconsistent Origin population | Enforce Origin creation through manager constructors only | Open |
+| No intermediate pipeline states | Optional step-by-step snapshots | Open |
+| Context quality metrics are positional only | Extend beyond positional scoring to include S/N ratio, redundancy, density | Partial (`observe/quality.py` has positional scoring) |
+| Coarse timeline snapshots | Option for detailed block-level diffs per turn | Open |
 
 ### D. Integration Friction
 
@@ -337,16 +347,30 @@ n8n / similar       → Workflow engine
 | Loose retriever protocol | Expand with optional health check, pagination, batch ops |
 | No RAG feedback loop | Add `ContextBlock.feedback()` for post-hoc relevance tuning |
 
-### E. Missing High-Value Features
+### E. Feature Status (Verified Against Source Code)
+
+| Feature | Status | Location |
+|---------|--------|----------|
+| **Query-aware context pruning** | **Already implemented** | `pipeline/trim.py:49` -- TrimStep accepts `query` param for relevance-weighted blended scoring |
+| **Prefix-aware structuring** | **Already implemented** | `pipeline/reorder.py:113-160` -- ReorderStep has `"prefix_stable"` strategy for KV cache optimization |
+| **Post-retrieval RAG compression** | **Already implemented** | `pipeline/rag_compress.py:26-151` -- RAGCompressStep with sentence extraction and selective augmentation |
+| **Token-level prompt compression** | **Already implemented** | `pipeline/compress.py:47-150` -- CompressStep with IDF-based scoring (distinct from CompactStep) |
+| **Context quality scoring** | **Partially implemented** | `observe/quality.py:22-127` -- Positional quality scoring; missing S/N ratio, redundancy, density |
+| **Context sufficiency checking** | **Already implemented** | `observe/sufficiency.py` -- Checks whether context is sufficient for the task |
+| **Context quality dashboard** | Not yet implemented | -- |
+| **Cost estimation preview** | Not yet implemented | -- |
+
+### F. Remaining High-Value UX Features (Confirmed Missing)
 
 | Feature | Impact | Complexity |
 |---------|--------|------------|
-| **Query-aware context pruning** | Trim based on relevance to current query, not just priority | Medium |
-| **Prefix-aware structuring** | Optimize block ordering for provider KV cache hits | Medium |
-| **Post-retrieval RAG compression** | Compress retrieved chunks before adding to window | Low |
-| **Token-level prompt compression** | Fine-grained pruning using IDF-like scoring | High |
-| **Context quality dashboard** | Visualize token distribution, redundancy, information density | Medium |
-| **Cost estimation preview** | Show estimated cost before making API call | Low |
+| **Origin convenience constructors** (`from_rag()`, `from_file()`, `from_tool()`) | Reduce boilerplate | Low |
+| **Pipeline presets** (`ContextPipeline.balanced()`, `.aggressive()`) | Faster onboarding | Low |
+| **Fluent/chainable API** (`window.add().add()`) | Better ergonomics (`add()` returns `None` today) | Low |
+| **Block IDs** (unique identifiers beyond names) | Unambiguous block operations | Medium |
+| **RAG feedback loop** (`block.feedback()`) | Close retrieval quality loop | Medium |
+| **Memory decay** | Time-based importance reduction | Medium |
+| **Collapse detection** | Detect information loss during compression | Medium |
 
 ### F. Documentation & Discoverability
 
@@ -377,22 +401,27 @@ n8n / similar       → Workflow engine
 
 **Goal**: Make the SDK production-ready for scale.
 
-- [ ] **Fix O(n^2) trimming** in ShortTermMemory (use deque)
-- [ ] **Optimize SQLiteBackend** (SQL WHERE filters, pagination, connection pooling)
-- [ ] **PostgresBackend connection pooling** (asyncpg.create_pool)
-- [ ] **Path traversal protection** in FileContext
-- [ ] **Robust async bridge** (replace ThreadPoolExecutor with anyio)
-- [ ] **Bounded caches** with documented size limits
+- [ ] **Fix O(n^2) trimming** in ShortTermMemory (use deque) -- `short_term.py:189,221`
+- [ ] **Optimize SQLiteBackend** (SQL WHERE filters, pagination) -- `sqlite_backend.py:212`
+- [x] ~~**PostgresBackend connection pooling**~~ -- Already uses `asyncpg.create_pool` at `postgres_backend.py:129-146`
+- [ ] **Path traversal protection** in FileContext -- `file_context.py:150,234`
+- [ ] **Robust async bridge** (replace ThreadPoolExecutor with anyio) -- `sync.py:37-39`
+- [x] ~~**Bounded caches**~~ -- Already uses `LRUCache(maxsize=4096)` at `utils/cache.py:16-17`
+- [ ] **Add pagination** to all memory backend `list_records()` methods
 - [ ] **Benchmark suite** for performance regression testing
 
 ### Phase 3: Advanced Context Intelligence (v0.9.0)
 
 **Goal**: Smarter context assembly informed by academic research.
 
-- [ ] **Query-aware pruning** -- relevance-weighted trimming based on current query (inspired by ACE, arXiv:2510.04618)
-- [ ] **Prefix-aware structuring** -- optimize block ordering for provider KV cache hits
-- [ ] **Post-retrieval compression** -- compress RAG chunks before adding to window (inspired by LLMLingua-2, arXiv:2403.12968)
-- [ ] **Context quality scoring** -- signal-to-noise ratio, redundancy detection, information density metrics
+- [x] ~~**Query-aware pruning**~~ -- Already implemented in TrimStep with `query` param and blended scoring (`pipeline/trim.py:49`)
+- [x] ~~**Prefix-aware structuring**~~ -- Already implemented as `"prefix_stable"` strategy in ReorderStep (`pipeline/reorder.py:113-160`)
+- [x] ~~**Post-retrieval compression**~~ -- Already implemented as RAGCompressStep (`pipeline/rag_compress.py:26-151`)
+- [x] ~~**Context quality scoring (positional)**~~ -- Already implemented (`observe/quality.py:22-127`)
+- [x] ~~**Context sufficiency checking**~~ -- Already implemented (`observe/sufficiency.py`)
+- [ ] **Extended quality metrics** -- signal-to-noise ratio, redundancy detection, information density (beyond current positional scoring)
+- [ ] **Memory decay** -- time-based importance reduction for long-term memory records
+- [ ] **Collapse detection** -- detect information loss during compression pipelines
 - [ ] **Adaptive memory** -- agent decides what/when to store/retrieve (inspired by AgeMem, arXiv:2601.01885)
 - [ ] **Anti-drift mechanisms** -- detect and mitigate context drift in multi-turn (inspired by arXiv:2510.07777)
 
