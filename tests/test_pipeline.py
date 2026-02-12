@@ -307,41 +307,44 @@ class TestReorderStep:
 
 
 class TestCompactStep:
-    """Tests for the CompactStep with LLM compaction and truncation fallback."""
+    """Tests for the CompactStep with LLM compaction."""
 
-    def test_fallback_truncation_when_no_llm(self) -> None:
-        step = CompactStep(min_tokens=5, target_ratio=0.3)
-        blocks = [
-            _make_block("long", content="word " * 200),
-        ]
-        result = step.process(blocks)
-        assert len(result) == 1
-        assert len(result[0].content) < len("word " * 200)
+    def test_raises_without_llm(self) -> None:
+        with pytest.raises(ValueError, match="requires an LLM"):
+            CompactStep()
 
-    def test_skips_short_blocks(self) -> None:
-        step = CompactStep(min_tokens=1000)
+    def test_skips_short_blocks(self, tmp_path) -> None:
+        def mock_llm(prompt: str) -> str:
+            return "summary"
+
+        step = CompactStep(
+            llm=mock_llm,
+            store=LocalCompactionStore(
+                base_dir=str(tmp_path / "c"),
+            ),
+            min_tokens=1000,
+        )
         original = "Short text"
         blocks = [_make_block("short", content=original)]
         result = step.process(blocks)
         assert result[0].content == original
 
-    def test_records_mutation(self) -> None:
-        step = CompactStep(min_tokens=5, target_ratio=0.3)
+    def test_records_mutation(self, tmp_path) -> None:
+        def mock_llm(prompt: str) -> str:
+            return "word " * 10
+
+        step = CompactStep(
+            llm=mock_llm,
+            store=LocalCompactionStore(
+                base_dir=str(tmp_path / "c"),
+            ),
+            min_tokens=5,
+            max_info_loss=1.0,
+        )
         blocks = [_make_block("long", content="word " * 200)]
         result = step.process(blocks)
         assert len(result[0].mutations) == 1
         assert result[0].mutations[0].action == "compacted"
-
-    def test_custom_compactor(self) -> None:
-        def my_compactor(content: str) -> str:
-            return content[:10]
-
-        step = CompactStep(compactor=my_compactor, min_tokens=1, max_info_loss=1.0)
-        blocks = [
-            _make_block("long", content="This is a long piece of text"),
-        ]
-        result = step.process(blocks)
-        assert result[0].content == "This is a "
 
     def test_compacts_with_llm_and_saves_original(self, tmp_path) -> None:
         store = LocalCompactionStore(base_dir=str(tmp_path / "compacted"))
@@ -425,7 +428,7 @@ class TestCompactStep:
         assert "## [2]" in saved_content
 
     def test_skips_non_string_content(self) -> None:
-        step = CompactStep(min_tokens=1)
+        step = CompactStep(llm=lambda p: "summary", min_tokens=1)
         block = ContextBlock(
             type=BlockType.SHORT_TERM_MEMORY,
             content=[{"role": "user", "content": "hi"}],
@@ -435,7 +438,7 @@ class TestCompactStep:
         assert result[0].content == [{"role": "user", "content": "hi"}]
 
     def test_step_name(self) -> None:
-        step = CompactStep()
+        step = CompactStep(llm=lambda p: "summary")
         assert step.name == "CompactStep"
 
 
@@ -880,52 +883,54 @@ class TestRAGCompressionStep:
 class TestCompactionCollapseDetection:
     """CompactStep should detect when compaction loses too much information."""
 
-    def test_returns_original_when_compactor_loses_keywords(self) -> None:
-        """A compactor that drops all keywords returns the original block."""
+    def test_returns_original_when_llm_loses_keywords(self) -> None:
+        """An LLM that drops all keywords returns the original block."""
 
-        def destructive_compactor(content: str) -> str:
+        def destructive_llm(prompt: str) -> str:
             return "xyz abc def"
 
         compact_step = CompactStep(
-            compactor=destructive_compactor,
+            llm=destructive_llm,
             min_tokens=1,
             max_info_loss=0.3,
         )
-        original_content = "python programming language tutorial guide examples code"
-        block = _make_block("keyword_rich", content=original_content)
+        original = (
+            "python programming language tutorial guide examples code"
+        )
+        block = _make_block("keyword_rich", content=original)
         result = compact_step.process([block])
-        assert result[0].content == original_content
+        assert result[0].content == original
         assert len(result[0].mutations) == 0
 
-    def test_no_warning_when_keywords_retained(self) -> None:
-        """Good keyword retention should not trigger a collapse warning."""
+    def test_no_warning_when_keywords_retained(
+        self, tmp_path
+    ) -> None:
+        """Good keyword retention should not trigger collapse."""
 
-        def half_content_compactor(content: str) -> str:
-            words = content.split()
-            return " ".join(words[: len(words) // 2])
+        def half_content_llm(prompt: str) -> str:
+            return "word " * 25
 
         compact_step = CompactStep(
-            compactor=half_content_compactor,
+            llm=half_content_llm,
+            store=LocalCompactionStore(
+                base_dir=str(tmp_path / "c"),
+            ),
             min_tokens=1,
             max_info_loss=0.9,
         )
-        block = _make_block("repetitive_block", content="word " * 50)
+        block = _make_block(
+            "repetitive_block", content="word " * 50
+        )
         result = compact_step.process([block])
         if result[0].mutations:
-            assert "COLLAPSE WARNING" not in result[0].mutations[0].detail
+            assert "COLLAPSE" not in result[0].mutations[0].detail
 
     def test_max_info_loss_threshold_is_configurable(self) -> None:
         """The max_info_loss parameter should be stored and respected."""
-        compact_step = CompactStep(max_info_loss=0.8)
+        compact_step = CompactStep(
+            llm=lambda p: "summary", max_info_loss=0.8
+        )
         assert compact_step._max_info_loss == 0.8
-
-    def test_default_compaction_without_explicit_info_loss(self) -> None:
-        """CompactStep works correctly with the default max_info_loss value."""
-        compact_step = CompactStep(min_tokens=5, target_ratio=0.3)
-        blocks = [_make_block("long_block", content="word " * 200)]
-        result = compact_step.process(blocks)
-        assert len(result) == 1
-        assert len(result[0].content) < len("word " * 200)
 
 
 # ---------------------------------------------------------------------------

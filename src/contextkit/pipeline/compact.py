@@ -5,9 +5,6 @@ to a pluggable ``CompactionStore``, and calls a user-provided LLM
 to produce a concise summary with ``[N]`` reference pointers back
 to the original sections.
 
-Falls back to simple truncation when no LLM is provided, preserving
-backwards compatibility with earlier versions of the SDK.
-
 Research basis: Ravaut et al. (2023) -- summarization can cause
 "information collapse" where key terms vanish; monitoring
 keyword retention catches this before it reaches the model.
@@ -23,10 +20,7 @@ from datetime import datetime, timezone
 from typing import Any, List
 
 from contextkit.compaction.store import CompactionStore, LocalCompactionStore
-from contextkit.constants import (
-    DEFAULT_COMPACT_MIN_TOKENS,
-    DEFAULT_COMPACT_TARGET_RATIO,
-)
+from contextkit.constants import DEFAULT_COMPACT_MIN_TOKENS
 from contextkit.core import ContextBlock
 from contextkit.observe.provenance import Mutation
 from contextkit.pipeline.base import PipelineStep
@@ -50,9 +44,6 @@ class CompactStep(PipelineStep):
     to a ``CompactionStore``, and calls an LLM to produce a concise
     summary using ``[N]`` references to cite original sections.
 
-    When no LLM is provided, falls back to simple truncation
-    (backwards compatible with the previous implementation).
-
     After compaction, checks keyword retention between the original
     and compacted content.  If retention drops below *max_info_loss*,
     a warning is logged and the original block is returned unmodified.
@@ -63,16 +54,15 @@ class CompactStep(PipelineStep):
             If only ``llm`` is provided, the async path wraps it.
         store: ``CompactionStore`` for saving originals.
             Defaults to ``LocalCompactionStore(".contextkit/compacted")``.
-        compactor: Legacy sync compaction function. If provided and
-            ``llm`` is None, used as the compaction function.
-        target_ratio: Target compression ratio for the truncation
-            fallback (0.0-1.0).
         min_tokens: Only compact blocks above this token count.
         max_info_loss: Maximum acceptable keyword loss (0.0-1.0).
             If ``1.0 - keyword_retention`` exceeds this value, the
             original block is returned unmodified to prevent
             information collapse.
         paragraph_separator: How to split content into sections.
+
+    Raises:
+        ValueError: If neither ``llm`` nor ``async_llm`` is provided.
     """
 
     def __init__(
@@ -80,19 +70,20 @@ class CompactStep(PipelineStep):
         llm: Callable[[str], str] | None = None,
         async_llm: Callable[[str], Awaitable[str]] | None = None,
         store: CompactionStore | None = None,
-        compactor: Callable[[str], str] | None = None,
-        target_ratio: float = DEFAULT_COMPACT_TARGET_RATIO,
         min_tokens: int = DEFAULT_COMPACT_MIN_TOKENS,
         max_info_loss: float = 0.5,
         paragraph_separator: str = "\n\n",
         **kwargs: Any,
     ) -> None:
+        if llm is None and async_llm is None:
+            raise ValueError(
+                "CompactStep requires an LLM. "
+                "Provide either llm= (sync) or async_llm= (async)."
+            )
         super().__init__(**kwargs)
         self._llm = llm
         self._async_llm = async_llm
         self._store = store or LocalCompactionStore()
-        self._compactor = compactor
-        self._target_ratio = target_ratio
         self._min_tokens = min_tokens
         self._max_info_loss = max_info_loss
         self._paragraph_separator = paragraph_separator
@@ -107,7 +98,7 @@ class CompactStep(PipelineStep):
     # ------------------------------------------------------------------
 
     def process(self, blocks: List[ContextBlock]) -> List[ContextBlock]:
-        """Compact long blocks via LLM or truncation fallback."""
+        """Compact long blocks via LLM summarization."""
         return [self._compact_block(block) for block in blocks]
 
     # ------------------------------------------------------------------
@@ -116,8 +107,6 @@ class CompactStep(PipelineStep):
 
     async def async_process(self, blocks: List[ContextBlock]) -> List[ContextBlock]:
         """Async compaction using ``async_llm`` when available."""
-        if self._llm is None and self._async_llm is None:
-            return self.process(blocks)
         return [await self._compact_block_async(block) for block in blocks]
 
     # ------------------------------------------------------------------
@@ -129,21 +118,11 @@ class CompactStep(PipelineStep):
         if not isinstance(block.content, str):
             return block
 
-        tokens_before = block.token_count
-        if tokens_before < self._min_tokens:
+        if block.token_count < self._min_tokens:
             return block
 
         before_content = block.content
-
-        if self._llm is not None:
-            compacted, ref_uri = self._compact_with_llm_sync(block)
-        elif self._compactor is not None:
-            compacted = self._compactor(before_content)
-            ref_uri = None
-        else:
-            compacted = self._default_truncator(before_content)
-            ref_uri = None
-
+        compacted, ref_uri = self._compact_with_llm_sync(block)
         return self._finalize(block, before_content, compacted, ref_uri)
 
     # ------------------------------------------------------------------
@@ -155,24 +134,17 @@ class CompactStep(PipelineStep):
         if not isinstance(block.content, str):
             return block
 
-        tokens_before = block.token_count
-        if tokens_before < self._min_tokens:
+        if block.token_count < self._min_tokens:
             return block
 
         before_content = block.content
 
         if self._async_llm is not None:
             compacted, ref_uri = await self._compact_with_llm_async(block)
-        elif self._llm is not None:
+        else:
             compacted, ref_uri = await asyncio.to_thread(
                 self._compact_with_llm_sync, block
             )
-        elif self._compactor is not None:
-            compacted = self._compactor(before_content)
-            ref_uri = None
-        else:
-            compacted = self._default_truncator(before_content)
-            ref_uri = None
 
         return self._finalize(block, before_content, compacted, ref_uri)
 
@@ -200,7 +172,6 @@ class CompactStep(PipelineStep):
                 loop = None
 
             if loop and loop.is_running():
-                # Inside an existing event loop -- create a new thread
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor(
@@ -335,15 +306,3 @@ class CompactStep(PipelineStep):
             for c in block.display_name
         )
         return f"{safe_name}_{content_hash}"
-
-    def _default_truncator(self, content: str) -> str:
-        """Truncate content to the target ratio, breaking at sentence boundaries."""
-        target_len = int(len(content) * self._target_ratio)
-        if target_len >= len(content):
-            return content
-
-        truncated = content[:target_len]
-        last_period = truncated.rfind(".")
-        if last_period > target_len * 0.5:
-            return truncated[: last_period + 1]
-        return truncated

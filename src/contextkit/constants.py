@@ -97,9 +97,6 @@ DEFAULT_SIMILARITY_THRESHOLD: float = 0.8
 # Compaction Defaults
 # ---------------------------------------------------------------------------
 
-DEFAULT_COMPACT_TARGET_RATIO: float = 0.5
-"""Default target compression ratio for the CompactStep."""
-
 DEFAULT_COMPACT_MIN_TOKENS: int = 100
 """Minimum token count before a block qualifies for compaction."""
 

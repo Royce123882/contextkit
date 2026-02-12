@@ -26,6 +26,9 @@ htmlcov/
 .pytest_cache/
 .mypy_cache/
 
+# Compaction artifacts
+.contextkit/
+
 # Docs
 docs/_build/
 docs/autoapi/

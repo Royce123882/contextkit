@@ -18,7 +18,6 @@ from contextkit.observe.events import (
     emit,
 )
 from contextkit.pipeline.base import PipelineReport, PipelineStep, StepReport
-from contextkit.pipeline.compact import CompactStep
 from contextkit.pipeline.deduplicate import DeduplicateStep
 from contextkit.pipeline.filter import FilterStep
 from contextkit.pipeline.mask import MaskStep
@@ -87,8 +86,11 @@ class ContextPipeline:
     ) -> "ContextPipeline":
         """Create an aggressive pipeline for maximum compression.
 
-        Applies tight deduplication, strict filtering, IDF compression,
-        budget trimming, observation masking, and cache-friendly reordering.
+        Applies tight deduplication, strict filtering, budget trimming,
+        observation masking, and cache-friendly reordering.
+
+        To include LLM-based compaction, add a ``CompactStep`` with
+        your LLM callable to the pipeline manually.
 
         Args:
             max_tokens: Token budget for the trim step.
@@ -100,7 +102,6 @@ class ContextPipeline:
         steps: List[PipelineStep] = [
             DeduplicateStep(similarity_threshold=0.7),
             FilterStep(min_relevance=0.5),
-            CompactStep(),
             TrimStep(max_tokens=max_tokens, query=query),
             MaskStep(window=3),
             ReorderStep(strategy="prefix_stable"),

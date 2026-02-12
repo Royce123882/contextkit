@@ -125,6 +125,10 @@ module = [
 ]
 ignore_missing_imports = true
 
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]  # assert is fine outside tests
+
 [tool.coverage.run]
 source = ["contextkit"]
 
