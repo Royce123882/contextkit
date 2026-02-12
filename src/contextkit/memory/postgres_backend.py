@@ -215,7 +215,9 @@ class PostgresBackend:
         """
         pool = await self._ensure_pool()
 
-        # Build query with optional tag filtering
+        # Build query with optional tag filtering and a LIMIT cap
+        # to reduce in-memory scoring overhead on large datasets.
+        _RETRIEVE_LIMIT = 1000
         sql = _SELECT_ALL_SQL
         params: List[Any] = []
         if tags:
@@ -224,6 +226,9 @@ class PostgresBackend:
                 conditions.append(f"tags @> ${i}::jsonb")
                 params.append(json.dumps([tag]))
             sql += " WHERE " + " AND ".join(conditions)
+        param_index = len(params) + 1
+        sql += f" LIMIT ${param_index}"
+        params.append(_RETRIEVE_LIMIT)
 
         async with pool.acquire() as conn:
             rows = await conn.fetch(sql, *params)
@@ -276,11 +281,18 @@ class PostgresBackend:
     async def list_records(
         self,
         tags: Optional[List[str]] = None,
+        offset: int = 0,
+        limit: int = 0,
     ) -> List[MemoryRecord]:
-        """List all records, optionally filtered by tags.
+        """List all records, optionally filtered by tags with pagination.
+
+        Tag filtering is pushed into SQL using JSONB containment
+        operators for efficient querying with the GIN index.
 
         Args:
             tags: Optional tag filter (records must have ALL tags).
+            offset: Number of records to skip (for pagination).
+            limit: Maximum number of records to return. 0 means no limit.
 
         Returns:
             List of matching MemoryRecords.
@@ -295,6 +307,15 @@ class PostgresBackend:
                 conditions.append(f"tags @> ${i}::jsonb")
                 params.append(json.dumps([tag]))
             sql += " WHERE " + " AND ".join(conditions)
+
+        if limit:
+            param_index = len(params) + 1
+            sql += f" LIMIT ${param_index} OFFSET ${param_index + 1}"
+            params.extend([limit, offset])
+        elif offset:
+            param_index = len(params) + 1
+            sql += f" OFFSET ${param_index}"
+            params.append(offset)
 
         async with pool.acquire() as conn:
             rows = await conn.fetch(sql, *params)

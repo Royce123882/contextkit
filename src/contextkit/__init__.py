@@ -26,6 +26,7 @@ from contextkit.files import FileContext
 from contextkit.logging import configure_logging, enable_debug, silence
 from contextkit.memory import LongTermMemory, ShortTermMemory
 from contextkit.models import ModelSpec, UnknownModelError
+from contextkit.observe import QualityScorer, SufficiencyChecker
 from contextkit.observe.provenance import Mutation, Origin
 from contextkit.pipeline import (
     CompactStep,
@@ -87,6 +88,9 @@ __all__ = [
     # Models
     "ModelSpec",
     "UnknownModelError",
+    # Observe
+    "QualityScorer",
+    "SufficiencyChecker",
     # Provenance
     "Mutation",
     "Origin",

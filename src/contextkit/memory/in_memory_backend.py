@@ -104,15 +104,32 @@ class InMemoryBackend:
     async def list_records(
         self,
         tags: List[str] | None = None,
+        offset: int = 0,
+        limit: int = 0,
     ) -> List[MemoryRecord]:
-        """List records, optionally filtered by tags."""
+        """List records, optionally filtered by tags with pagination.
+
+        Args:
+            tags: Optional tag filter (records must have ALL tags).
+            offset: Number of records to skip (for pagination).
+            limit: Maximum number of records to return. 0 means no limit.
+
+        Returns:
+            List of matching MemoryRecords.
+        """
         if tags is None:
-            return list(self._records.values())
-        return [
-            record
-            for record in self._records.values()
-            if all(tag in record.tags for tag in tags)
-        ]
+            records = list(self._records.values())
+        else:
+            records = [
+                record
+                for record in self._records.values()
+                if all(tag in record.tags for tag in tags)
+            ]
+        if offset:
+            records = records[offset:]
+        if limit:
+            records = records[:limit]
+        return records
 
     @property
     def record_count(self) -> int:

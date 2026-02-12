@@ -45,8 +45,9 @@ class CompactStep(PipelineStep):
             0.5 means aim for 50% of original size.
         min_tokens: Only compact blocks above this token count.
         max_info_loss: Maximum acceptable keyword loss (0.0-1.0).
-            If ``1.0 - keyword_retention`` exceeds this value, a
-            warning is logged.  Defaults to 0.5 (50% loss).
+            If ``1.0 - keyword_retention`` exceeds this value, the
+            original block is returned unmodified to prevent
+            information collapse.  Defaults to 0.5 (50% loss).
     """
 
     def __init__(
@@ -75,8 +76,9 @@ class CompactStep(PipelineStep):
     def _compact_block(self, block: ContextBlock) -> ContextBlock:
         """Compact a single block if it exceeds the minimum token threshold.
 
-        After compaction, checks keyword retention and logs a warning
-        if information loss exceeds the configured threshold.
+        After compaction, checks keyword retention. If information loss
+        exceeds the configured threshold, the original block is returned
+        unmodified to prevent information collapse.
         """
         if not isinstance(block.content, str):
             return block
@@ -95,30 +97,24 @@ class CompactStep(PipelineStep):
         keyword_retention = word_overlap_score(before_content, compacted)
         info_loss = 1.0 - keyword_retention
 
-        collapse_detail = ""
         if info_loss > self._max_info_loss:
-            collapse_detail = (
-                f" [COLLAPSE WARNING: keyword retention {keyword_retention:.0%},"
-                f" loss {info_loss:.0%} exceeds threshold {self._max_info_loss:.0%}]"
-            )
             logger.warning(
                 "Collapse detected in block '%s': keyword retention %.0f%%, "
-                "info loss %.0f%% exceeds threshold %.0f%%",
+                "info loss %.0f%% exceeds threshold %.0f%%. "
+                "Returning original block unmodified.",
                 block.display_name,
                 keyword_retention * 100,
                 info_loss * 100,
                 self._max_info_loss * 100,
             )
+            return block
 
         new_block = block.model_copy(update={"content": compacted})
         new_block.mutations.append(
             Mutation(
                 step=self.name,
                 action="compacted",
-                detail=(
-                    f"{tokens_before:,} -> {tokens_after:,} tokens"
-                    f"{collapse_detail}"
-                ),
+                detail=f"{tokens_before:,} -> {tokens_after:,} tokens",
                 tokens_before=tokens_before,
                 tokens_after=tokens_after,
                 before_content=before_content,

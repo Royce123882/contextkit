@@ -209,11 +209,7 @@ class SQLiteBackend:
         """
         await self._ensure_table()
 
-        records = await self._fetch_all_records()
-
-        # Filter by tags
-        if tags:
-            records = [r for r in records if all(tag in r.tags for tag in tags)]
+        records = await self._fetch_filtered_records(tags)
 
         # Score and rank by relevance with decay
         def relevance_score(record: MemoryRecord) -> float:
@@ -263,8 +259,50 @@ class SQLiteBackend:
     async def list_records(
         self,
         tags: List[str] | None = None,
+        offset: int = 0,
+        limit: int = 0,
     ) -> List[MemoryRecord]:
-        """List all records, optionally filtered by tags.
+        """List all records, optionally filtered by tags with pagination.
+
+        Tag filtering is pushed into SQL using LIKE queries against
+        the JSON-encoded tags column for better performance.
+
+        Args:
+            tags: Optional tag filter (records must have ALL tags).
+            offset: Number of records to skip (for pagination).
+            limit: Maximum number of records to return. 0 means no limit.
+
+        Returns:
+            List of matching MemoryRecords.
+        """
+        await self._ensure_table()
+
+        sql = _SELECT_ALL_SQL
+        params: List[str] = []
+        if tags:
+            conditions = [f"tags LIKE ?" for _ in tags]
+            params = [f'%"{tag}"%' for tag in tags]
+            sql += " WHERE " + " AND ".join(conditions)
+        if limit:
+            sql += f" LIMIT {limit} OFFSET {offset}"
+        elif offset:
+            sql += f" LIMIT -1 OFFSET {offset}"
+
+        records: List[MemoryRecord] = []
+        async with self._connect() as db:
+            async with db.execute(sql, params) as cursor:
+                async for row in cursor:
+                    records.append(_row_to_record(row))
+        return records
+
+    async def _fetch_filtered_records(
+        self,
+        tags: List[str] | None = None,
+    ) -> List[MemoryRecord]:
+        """Load records from the database, filtering tags in SQL.
+
+        Uses SQL LIKE queries against the JSON-encoded tags column
+        instead of fetching all records and filtering in Python.
 
         Args:
             tags: Optional tag filter (records must have ALL tags).
@@ -272,12 +310,19 @@ class SQLiteBackend:
         Returns:
             List of matching MemoryRecords.
         """
-        await self._ensure_table()
+        sql = _SELECT_ALL_SQL
+        params: List[str] = []
+        if tags:
+            conditions = [f"tags LIKE ?" for _ in tags]
+            params = [f'%"{tag}"%' for tag in tags]
+            sql += " WHERE " + " AND ".join(conditions)
 
-        records = await self._fetch_all_records()
-        if tags is None:
-            return records
-        return [r for r in records if all(tag in r.tags for tag in tags)]
+        records: List[MemoryRecord] = []
+        async with self._connect() as db:
+            async with db.execute(sql, params) as cursor:
+                async for row in cursor:
+                    records.append(_row_to_record(row))
+        return records
 
     async def _fetch_all_records(self) -> List[MemoryRecord]:
         """Load all records from the database."""

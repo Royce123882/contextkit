@@ -153,11 +153,15 @@ class MemoryBackend(Protocol):
     async def list_records(
         self,
         tags: List[str] | None = None,
+        offset: int = 0,
+        limit: int = 0,
     ) -> List[MemoryRecord]:
-        """List all records, optionally filtered by tags.
+        """List all records, optionally filtered by tags with pagination.
 
         Args:
             tags: Optional tag filter (records must have ALL tags).
+            offset: Number of records to skip (for pagination).
+            limit: Maximum number of records to return. 0 means no limit.
 
         Returns:
             List of matching MemoryRecords.

@@ -487,6 +487,20 @@ class ContextWindow:
         """
         self._check_budget_warnings()
 
+    def lint(self) -> list:
+        """Run the context linter and return a list of warnings.
+
+        Checks for common anti-patterns such as missing system prompts,
+        high-priority blocks in the middle (lost-in-middle), oversized
+        blocks, redundant content, and empty blocks.
+
+        Returns:
+            A list of LintWarning objects describing detected issues.
+        """
+        from contextkit.observe.linter import ContextLinter
+
+        return ContextLinter().lint(self)
+
     def __repr__(self) -> str:
         """Return a developer-friendly string representation."""
         model_str = self._model_name or "custom"

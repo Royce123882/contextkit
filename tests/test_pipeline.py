@@ -337,7 +337,7 @@ class TestCompactStep:
         def my_compactor(content: str) -> str:
             return content[:10]
 
-        step = CompactStep(compactor=my_compactor, min_tokens=1)
+        step = CompactStep(compactor=my_compactor, min_tokens=1, max_info_loss=1.0)
         blocks = [
             _make_block("long", content="This is a long piece of text"),
         ]
@@ -873,8 +873,8 @@ class TestTokenLevelCompressionStep:
 class TestCompactionCollapseDetection:
     """CompactStep should detect when compaction loses too much information."""
 
-    def test_warns_when_compactor_loses_keywords(self) -> None:
-        """A compactor that drops all keywords triggers a COLLAPSE WARNING."""
+    def test_returns_original_when_compactor_loses_keywords(self) -> None:
+        """A compactor that drops all keywords returns the original block."""
 
         def destructive_compactor(content: str) -> str:
             return "xyz abc def"
@@ -884,14 +884,11 @@ class TestCompactionCollapseDetection:
             min_tokens=1,
             max_info_loss=0.3,
         )
-        block = _make_block(
-            "keyword_rich",
-            content="python programming language tutorial guide examples code",
-        )
+        original_content = "python programming language tutorial guide examples code"
+        block = _make_block("keyword_rich", content=original_content)
         result = compact_step.process([block])
-        mutations = result[0].mutations
-        assert len(mutations) == 1
-        assert "COLLAPSE WARNING" in mutations[0].detail
+        assert result[0].content == original_content
+        assert len(result[0].mutations) == 0
 
     def test_no_warning_when_keywords_retained(self) -> None:
         """Good keyword retention should not trigger a collapse warning."""
