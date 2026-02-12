@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import List, Tuple
 
 from contextkit.assembler.report import AssemblyReport, BlockDecision
-from contextkit.core import ContextBlock, ContextWindow
+from contextkit.core.block import ContextBlock
+from contextkit.core.context_window import ContextWindow
 from contextkit.observe.events import ContextEvent, EventData, emit
 
 

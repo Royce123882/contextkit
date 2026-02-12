@@ -14,6 +14,9 @@ from contextkit.observe.events import (
     ContextEvent,
     emit,
 )
+from contextkit.observe.diff import diff_windows
+from contextkit.observe.explain import explain_block
+from contextkit.observe.inspect import dump_window, inspect_window
 from contextkit.observe.warnings import BudgetMonitor
 
 
@@ -243,8 +246,6 @@ class ContextWindow:
         Returns:
             Formatted inspection output.
         """
-        from contextkit.observe.inspect import inspect_window
-
         return inspect_window(self, block_name=block_name, format=format)
 
     def explain(self, block_name: str) -> str:
@@ -256,8 +257,6 @@ class ContextWindow:
         Returns:
             A plain-language explanation.
         """
-        from contextkit.observe.explain import explain_block
-
         return explain_block(self, block_name)
 
     def diff(
@@ -274,8 +273,6 @@ class ContextWindow:
         Returns:
             A formatted diff showing added, removed, and changed blocks.
         """
-        from contextkit.observe.diff import diff_windows
-
         return diff_windows(self, other, format=format)
 
     def dump(self, path: str) -> None:
@@ -284,8 +281,6 @@ class ContextWindow:
         Args:
             path: The file path to write the JSON snapshot to.
         """
-        from contextkit.observe.inspect import dump_window
-
         dump_window(self, path)
 
     def clear_cache(self) -> None:

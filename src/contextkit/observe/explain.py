@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List
 
+from contextkit.assembler.report import AssemblyReport
+
 if TYPE_CHECKING:
-    from contextkit.assembler import BlockDecision
+    from contextkit.assembler.report import BlockDecision
     from contextkit.core import ContextBlock, ContextWindow
 
 
@@ -33,8 +35,6 @@ def explain_block(window: ContextWindow, block_name: str) -> str:
         return _explain_included(window, block)
 
     # Check if block is in the assembly report's excluded list
-    from contextkit.assembler import AssemblyReport
-
     report = window.assembly_report
     if isinstance(report, AssemblyReport):
         for decision in report.excluded:
@@ -73,8 +73,6 @@ def _explain_included(window: ContextWindow, block: ContextBlock) -> str:
             lines.append(f"- Relevance: {block.origin.relevance_score:.2f}")
 
     # Assembly info
-    from contextkit.assembler import AssemblyReport
-
     report = window.assembly_report
     if isinstance(report, AssemblyReport):
         lines.append("- Added by: ContextAssembler")
