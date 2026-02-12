@@ -13,15 +13,20 @@ from contextkit.observe.provenance import Mutation, Origin
 
 if TYPE_CHECKING:
     from contextkit.observe.drift import DriftDetector
+    from contextkit.observe.linter import ContextLinter, LintWarning
     from contextkit.observe.quality import QualityScorer
     from contextkit.observe.quality_models import DriftReport, PositionScore, QualityReport
     from contextkit.observe.sufficiency import SufficiencyChecker
     from contextkit.observe.sufficiency_models import SufficiencyResult
+    from contextkit.observe.telemetry import OTelExporter
 
 __all__ = [
+    "ContextLinter",
     "DriftDetector",
     "DriftReport",
+    "LintWarning",
     "Mutation",
+    "OTelExporter",
     "Origin",
     "PositionScore",
     "QualityReport",
@@ -31,8 +36,11 @@ __all__ = [
 ]
 
 _LAZY_IMPORTS = {
+    "ContextLinter": "contextkit.observe.linter",
     "DriftDetector": "contextkit.observe.drift",
     "DriftReport": "contextkit.observe.quality_models",
+    "LintWarning": "contextkit.observe.linter",
+    "OTelExporter": "contextkit.observe.telemetry",
     "QualityScorer": "contextkit.observe.quality",
     "PositionScore": "contextkit.observe.quality_models",
     "QualityReport": "contextkit.observe.quality_models",

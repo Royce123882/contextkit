@@ -40,7 +40,7 @@ class RecordNotFoundError(ContextKitError):
     """Raised when a memory record or block is not found."""
 
 
-class InvalidBlockError(ContextKitError):
+class InvalidBlockError(ContextKitError, ValueError):
     """Raised when a ContextBlock fails validation."""
 
 

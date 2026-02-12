@@ -6,6 +6,7 @@ collecting reports and emitting events for each step.
 
 from __future__ import annotations
 
+import copy
 import logging
 from typing import List, Tuple
 
@@ -39,9 +40,15 @@ class ContextPipeline:
         steps: Ordered list of PipelineStep instances.
     """
 
-    def __init__(self, steps: List[PipelineStep]) -> None:
+    def __init__(
+        self,
+        steps: List[PipelineStep],
+        capture_snapshots: bool = False,
+    ) -> None:
         self._steps = steps
         self._last_report: PipelineReport | None = None
+        self._capture_snapshots = capture_snapshots
+        self._snapshots: List[List[ContextBlock]] = []
 
     # ------------------------------------------------------------------
     # Preset factory methods
@@ -134,6 +141,19 @@ class ContextPipeline:
         """Report from the last run, if available."""
         return self._last_report
 
+    @property
+    def snapshots(self) -> List[List[ContextBlock]]:
+        """Intermediate block states between pipeline steps.
+
+        Only populated if ``capture_snapshots=True`` was passed to the
+        constructor. Each entry is a deep copy of the block list as
+        it existed before the corresponding step ran.
+
+        Returns:
+            List of block lists (one per executed step).
+        """
+        return list(self._snapshots)
+
     def run(self, window: ContextWindow) -> ContextWindow:
         """Run the pipeline on a context window.
 
@@ -224,12 +244,15 @@ class ContextPipeline:
         window: ContextWindow,
     ) -> List[StepReport]:
         """Execute all pipeline steps synchronously and collect reports."""
+        self._snapshots.clear()
         step_reports: List[StepReport] = []
 
         for step in self._steps:
             if not step.should_run(blocks):
                 logger.debug("Skipping step '%s' (guard returned False)", step.name)
                 continue
+            if self._capture_snapshots:
+                self._snapshots.append(copy.deepcopy(blocks))
             report, blocks[:] = self._execute_step(step, blocks)
             step_reports.append(report)
 
