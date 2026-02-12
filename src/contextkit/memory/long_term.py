@@ -7,7 +7,10 @@ MemoryBackend protocol.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List
+
+logger = logging.getLogger("contextkit")
 
 from contextkit.constants import (
     DEFAULT_IMPORTANCE,
@@ -65,6 +68,7 @@ class LongTermMemory:
         Returns:
             The stored MemoryRecord.
         """
+        logger.debug("Storing memory '%s' (importance=%.2f)", key, importance)
         return await self._backend.store(
             key=key,
             content=content,
@@ -89,6 +93,7 @@ class LongTermMemory:
         Returns:
             List of matching MemoryRecords.
         """
+        logger.info("Retrieving memories: query=%r, top_k=%d", query[:50] if query else "", top_k)
         return await self._backend.retrieve(query=query, top_k=top_k, tags=tags)
 
     async def retrieve_as_blocks(

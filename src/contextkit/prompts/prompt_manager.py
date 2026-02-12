@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any, Dict, List
 
@@ -9,6 +10,8 @@ from contextkit.constants import PRIORITY_SYSTEM_PROMPT
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
 from contextkit.prompts.prompt_version import PromptVersion
+
+logger = logging.getLogger("contextkit")
 
 
 class PromptManager:
@@ -62,6 +65,7 @@ class PromptManager:
             description=description,
         )
         versions.append(prompt_ver)
+        logger.debug("Registered prompt template '%s' (v%s)", name, version)
         return prompt_ver
 
     def get_template(
@@ -119,6 +123,12 @@ class PromptManager:
             A ContextBlock with rendered content and Origin.
         """
         resolved_template = self.get_template(name, version)
+        logger.info(
+            "Rendering prompt '%s' (v%s) with %d variables",
+            name,
+            resolved_template.version,
+            len(variables),
+        )
         content = _interpolate(resolved_template.template, variables)
 
         origin = Origin(
@@ -184,6 +194,33 @@ class PromptManager:
             priority=priority,
             name=f"{base_name}+{override_name}",
             origin=origin,
+        )
+
+    async def arender(
+        self,
+        name: str,
+        version: str | None = None,
+        priority: int = PRIORITY_SYSTEM_PROMPT,
+        **variables: Any,
+    ) -> ContextBlock:
+        """Async version of :meth:`render`."""
+        return self.render(name, version=version, priority=priority, **variables)
+
+    async def acompose(
+        self,
+        base_name: str,
+        override_name: str,
+        separator: str = "\n\n",
+        priority: int = PRIORITY_SYSTEM_PROMPT,
+        **variables: Any,
+    ) -> ContextBlock:
+        """Async version of :meth:`compose`."""
+        return self.compose(
+            base_name,
+            override_name,
+            separator=separator,
+            priority=priority,
+            **variables,
         )
 
     def diff(self, name: str, version_a: str, version_b: str) -> str:

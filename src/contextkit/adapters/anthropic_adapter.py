@@ -7,7 +7,10 @@ remaining blocks to the Anthropic message format.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List
+
+logger = logging.getLogger("contextkit")
 
 from contextkit.core import BlockType, ContextWindow
 from contextkit.observe.events import (
@@ -59,6 +62,13 @@ class AnthropicAdapter:
                     messages.extend(block.content)
 
         system_text = "\n\n".join(system_parts) if system_parts else ""
+
+        logger.info(
+            "Formatted for Anthropic: %d messages, %d system parts, %s tokens",
+            len(messages),
+            len(system_parts),
+            f"{window.token_count:,}",
+        )
 
         payload: Dict[str, Any] = {
             "messages": messages,

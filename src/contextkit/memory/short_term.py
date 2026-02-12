@@ -7,12 +7,15 @@ functions for trimming conversations without the full framework.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List
 
 from contextkit.utils.token_counting import count as count_tokens
 from contextkit.constants import DEFAULT_ENCODING, PRIORITY_SHORT_TERM_MEMORY
 from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
+
+logger = logging.getLogger("contextkit")
 
 
 class ShortTermMemory:
@@ -95,7 +98,16 @@ class ShortTermMemory:
             message["metadata"] = metadata
         self._messages.append(message)
         self._total_turns_added += 1
+        before_count = len(self._messages)
         self._apply_trimming()
+        trimmed = before_count - len(self._messages)
+        if trimmed > 0:
+            logger.debug(
+                "Trimmed %d turns (strategy=%s, keeping %d)",
+                trimmed,
+                self._strategy,
+                len(self._messages),
+            )
 
     def add_messages(self, messages: List[Dict[str, Any]]) -> None:
         """Add multiple messages at once.

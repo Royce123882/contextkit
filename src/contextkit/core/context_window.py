@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Tuple
 
 from contextkit.utils.cache import clear_token_cache
@@ -18,6 +19,8 @@ from contextkit.observe.diff import diff_windows
 from contextkit.observe.explain import explain_block
 from contextkit.observe.inspect import dump_window, inspect_window
 from contextkit.observe.warnings import BudgetMonitor
+
+logger = logging.getLogger("contextkit")
 
 
 class ContextWindow:
@@ -63,6 +66,11 @@ class ContextWindow:
         self._encoding = spec.encoding
         self._input_cost_per_mtok = spec.input_cost_per_mtok
         self._output_cost_per_mtok = spec.output_cost_per_mtok
+        logger.info(
+            "ContextWindow created for model '%s' (%s tokens)",
+            model,
+            f"{spec.max_context:,}",
+        )
 
     def _init_with_manual_tokens(self, max_tokens: int) -> None:
         """Configure the window with manual token limits."""
@@ -71,6 +79,7 @@ class ContextWindow:
         self._encoding = DEFAULT_ENCODING
         self._input_cost_per_mtok = 0.0
         self._output_cost_per_mtok = 0.0
+        logger.info("ContextWindow created with manual budget (%s tokens)", f"{max_tokens:,}")
 
     @property
     def model_name(self) -> str | None:
@@ -141,6 +150,12 @@ class ContextWindow:
         self._invalidate_cache()
         self._emit_block_added_event(block)
         self._check_budget_warnings()
+        logger.debug(
+            "Added block '%s' (%s tokens, priority %d)",
+            block.display_name,
+            f"{block_tokens:,}",
+            block.priority,
+        )
 
     def remove(self, name: str) -> None:
         """Remove a block by name.

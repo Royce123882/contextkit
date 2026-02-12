@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 from typing import List, Tuple
 
 from contextkit.assembler.report import AssemblyReport, BlockDecision
 from contextkit.core.block import ContextBlock
 from contextkit.core.context_window import ContextWindow
 from contextkit.observe.events import ContextEvent, EventData, emit
+
+logger = logging.getLogger("contextkit")
 
 
 class ContextAssembler:
@@ -37,6 +40,11 @@ class ContextAssembler:
         Returns:
             The ContextWindow with assembled blocks.
         """
+        logger.info(
+            "Assembling %d blocks into window (budget: %s tokens)",
+            len(blocks),
+            f"{self._window.max_tokens:,}",
+        )
         sorted_blocks = sorted(blocks, key=lambda b: b.priority, reverse=True)
         included, excluded = self._partition_blocks(sorted_blocks)
 
@@ -45,7 +53,29 @@ class ContextAssembler:
         self._emit_assembly_complete(report, included, excluded)
         self._window.check_budget_warnings()
 
+        logger.info(
+            "Assembly complete: %d included, %d excluded, %s tokens used (%s remaining)",
+            len(included),
+            len(excluded),
+            f"{report.total_tokens:,}",
+            f"{report.budget_remaining:,}",
+        )
+
         return self._window
+
+    async def aassemble(self, blocks: List[ContextBlock]) -> ContextWindow:
+        """Async version of :meth:`assemble`.
+
+        Identical behaviour but ``await``-able so it can be used in
+        async application code without blocking the event loop.
+
+        Args:
+            blocks: The candidate blocks to assemble.
+
+        Returns:
+            The ContextWindow with assembled blocks.
+        """
+        return self.assemble(blocks)
 
     def _partition_blocks(
         self, sorted_blocks: List[ContextBlock]

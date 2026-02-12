@@ -6,6 +6,7 @@ collecting reports and emitting events for each step.
 
 from __future__ import annotations
 
+import logging
 from typing import List, Tuple
 
 from contextkit.core import ContextBlock, ContextWindow
@@ -16,6 +17,8 @@ from contextkit.observe.events import (
     emit,
 )
 from contextkit.pipeline.base import PipelineReport, PipelineStep, StepReport
+
+logger = logging.getLogger("contextkit")
 
 
 class ContextPipeline:
@@ -56,6 +59,9 @@ class ContextPipeline:
         Returns:
             The same ContextWindow (modified in place).
         """
+        step_names = ", ".join(s.name for s in self._steps)
+        logger.info("Running pipeline (%d steps: %s)", len(self._steps), step_names)
+
         blocks = list(window.blocks)
         total_tokens_before = sum(b.token_count for b in blocks)
 
@@ -68,7 +74,29 @@ class ContextPipeline:
 
         self._emit_pipeline_complete()
 
+        saved = total_tokens_before - total_tokens_after
+        logger.info(
+            "Pipeline complete: %s -> %s tokens (saved %s)",
+            f"{total_tokens_before:,}",
+            f"{total_tokens_after:,}",
+            f"{saved:,}",
+        )
+
         return window
+
+    async def arun(self, window: ContextWindow) -> ContextWindow:
+        """Async version of :meth:`run`.
+
+        Identical behaviour but ``await``-able so it can be used in
+        async application code without blocking the event loop.
+
+        Args:
+            window: The ContextWindow to optimize.
+
+        Returns:
+            The same ContextWindow (modified in place).
+        """
+        return self.run(window)
 
     def _execute_all_steps(
         self,
@@ -94,10 +122,21 @@ class ContextPipeline:
         tokens_before = sum(b.token_count for b in blocks)
         blocks_before_count = len(blocks)
 
+        logger.debug("Running step '%s' on %d blocks", step.name, blocks_before_count)
         processed_blocks = step.process(blocks)
 
         tokens_after = sum(b.token_count for b in processed_blocks)
         blocks_after_count = len(processed_blocks)
+
+        if tokens_before != tokens_after:
+            logger.debug(
+                "Step '%s': %s -> %s tokens, %d blocks -> %d blocks",
+                step.name,
+                f"{tokens_before:,}",
+                f"{tokens_after:,}",
+                blocks_before_count,
+                blocks_after_count,
+            )
 
         report = StepReport(
             step_name=step.name,

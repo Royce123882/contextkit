@@ -56,6 +56,7 @@ class FileContext:
         Returns:
             List of FileReference objects found.
         """
+        logger.info("Scanning '%s' for files", self._base_path)
         self._index = []
 
         if not self._base_path.exists():
@@ -77,7 +78,12 @@ class FileContext:
                 )
                 self._index.append(ref)
 
+        logger.info("Found %d files", len(self._index))
         return list(self._index)
+
+    async def ascan(self) -> List[FileReference]:
+        """Async version of :meth:`scan`."""
+        return self.scan()
 
     def search(self, query: str, top_k: int = DEFAULT_TOP_K) -> List[FileReference]:
         """Search indexed files by name or path substring.
@@ -134,6 +140,7 @@ class FileContext:
         Returns:
             List of ContextBlocks with file content.
         """
+        logger.info("Loading %d files (budget: %s tokens)", len(refs), max_tokens or "unlimited")
         blocks: List[ContextBlock] = []
         total_tokens = 0
 
@@ -179,7 +186,18 @@ class FileContext:
             if max_tokens is not None and total_tokens >= max_tokens:
                 break
 
+        logger.info("Loaded %d file blocks (%s tokens)", len(blocks), f"{total_tokens:,}")
         return blocks
+
+    async def aload(
+        self,
+        refs: List[FileReference],
+        max_tokens: int | None = None,
+        encoding: str = DEFAULT_ENCODING,
+        priority: int = PRIORITY_FILE_CONTEXT,
+    ) -> List[ContextBlock]:
+        """Async version of :meth:`load`."""
+        return self.load(refs, max_tokens=max_tokens, encoding=encoding, priority=priority)
 
     def load_single(
         self,
@@ -214,6 +232,14 @@ class FileContext:
             name=f"file_{filepath.name}",
             origin=origin,
         )
+
+    async def aload_single(
+        self,
+        path: str,
+        priority: int = PRIORITY_FILE_CONTEXT,
+    ) -> ContextBlock:
+        """Async version of :meth:`load_single`."""
+        return self.load_single(path, priority=priority)
 
 
 def _chunk_to_budget(

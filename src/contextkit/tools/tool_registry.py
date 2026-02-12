@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, Dict, List, Tuple
 
 from contextkit.constants import PRIORITY_TOOL_DEFINITION
@@ -10,6 +11,8 @@ from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
 from contextkit.tools.tool_models import ToolDefinition, ToolOutput
 from contextkit.utils.text_similarity import word_overlap_score
+
+logger = logging.getLogger("contextkit")
 
 
 class ToolRegistry:
@@ -48,6 +51,7 @@ class ToolRegistry:
             tags=tags or [],
         )
         self._tools[name] = tool
+        logger.debug("Registered tool '%s'", name)
         return tool
 
     def get_tool(self, name: str) -> ToolDefinition:
@@ -108,6 +112,11 @@ class ToolRegistry:
         if max_tools is not None:
             scored = scored[:max_tools]
 
+        logger.info(
+            "Selecting tools for task (candidates: %d, max: %s)",
+            len(scored),
+            max_tools or "all",
+        )
         blocks: List[ContextBlock] = []
         for score, tool in scored:
             tool_schema = {
@@ -165,6 +174,19 @@ class ToolRegistry:
             name="tool_definitions",
             origin=origin,
         )
+
+    async def aselect(
+        self,
+        task_description: str,
+        tags: List[str] | None = None,
+        max_tools: int | None = None,
+    ) -> List[ContextBlock]:
+        """Async version of :meth:`select`."""
+        return self.select(task_description, tags=tags, max_tools=max_tools)
+
+    async def ato_block(self, priority: int = PRIORITY_TOOL_DEFINITION) -> ContextBlock:
+        """Async version of :meth:`to_block`."""
+        return self.to_block(priority=priority)
 
     @property
     def tool_count(self) -> int:

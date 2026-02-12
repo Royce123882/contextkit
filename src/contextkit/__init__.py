@@ -15,6 +15,7 @@ from contextkit.core import (
     ContextBlock,
     ContextWindow,
 )
+from contextkit.logging import configure_logging, enable_debug, silence
 from contextkit.models import ModelSpec, UnknownModelError
 from contextkit.observe.provenance import Mutation, Origin
 
@@ -31,4 +32,7 @@ __all__ = [
     "Origin",
     "UnknownModelError",
     "__version__",
+    "configure_logging",
+    "enable_debug",
+    "silence",
 ]

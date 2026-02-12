@@ -7,7 +7,10 @@ Supports budget-aware retrieval (stops when token limit is reached).
 
 from __future__ import annotations
 
+import logging
 from typing import List
+
+logger = logging.getLogger("contextkit")
 
 from contextkit.utils.token_counting import count as count_tokens
 from contextkit.constants import (
@@ -70,6 +73,12 @@ class RAGContext:
         Returns:
             List of ContextBlocks with retrieved content.
         """
+        logger.info(
+            "RAG retrieve: query=%r, top_k=%d, budget=%s tokens",
+            query[:50],
+            top_k,
+            max_tokens or "unlimited",
+        )
         chunks = await self._retriever.retrieve(query=query, top_k=top_k)
 
         # Filter by relevance
@@ -111,6 +120,7 @@ class RAGContext:
             blocks.append(block)
             total_tokens += token_count
 
+        logger.info("RAG retrieved %d blocks (%s tokens)", len(blocks), f"{total_tokens:,}")
         return blocks
 
     async def health_check(self) -> bool:

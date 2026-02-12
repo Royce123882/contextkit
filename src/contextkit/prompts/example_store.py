@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Tuple
 
 from contextkit.utils.token_counting import count as count_tokens
@@ -15,6 +16,8 @@ from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
 from contextkit.prompts.example import Example
 from contextkit.utils.text_similarity import word_overlap_score
+
+logger = logging.getLogger("contextkit")
 
 
 class ExampleStore:
@@ -56,6 +59,7 @@ class ExampleStore:
             metadata=metadata or {},
         )
         self._examples[example_id] = example
+        logger.debug("Added example '%s'", example_id)
         return example
 
     def get(self, example_id: str) -> Example:
@@ -161,6 +165,34 @@ class ExampleStore:
             total_tokens += token_count
 
         return blocks
+
+    async def aselect(
+        self,
+        input_text: str,
+        top_k: int = DEFAULT_EXAMPLE_TOP_K,
+        tags: List[str] | None = None,
+    ) -> List[Tuple[Example, float]]:
+        """Async version of :meth:`select`."""
+        return self.select(input_text, top_k=top_k, tags=tags)
+
+    async def afit_to_budget(
+        self,
+        input_text: str,
+        max_tokens: int,
+        top_k: int = DEFAULT_EXAMPLE_CANDIDATE_LIMIT,
+        tags: List[str] | None = None,
+        encoding: str = DEFAULT_ENCODING,
+        priority: int = PRIORITY_EXAMPLE,
+    ) -> List[ContextBlock]:
+        """Async version of :meth:`fit_to_budget`."""
+        return self.fit_to_budget(
+            input_text,
+            max_tokens,
+            top_k=top_k,
+            tags=tags,
+            encoding=encoding,
+            priority=priority,
+        )
 
     def list_examples(self) -> List[str]:
         """List all example IDs."""

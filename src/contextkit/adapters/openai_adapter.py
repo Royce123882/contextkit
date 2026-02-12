@@ -7,7 +7,10 @@ array, matching OpenAI's expected format.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List
+
+logger = logging.getLogger("contextkit")
 
 from contextkit.core import BlockType, ContextWindow
 from contextkit.observe.events import (
@@ -55,6 +58,12 @@ class OpenAIAdapter:
                         )
                 else:
                     messages.extend(block.content)
+
+        logger.info(
+            "Formatted for OpenAI: %d messages, %s tokens",
+            len(messages),
+            f"{window.token_count:,}",
+        )
 
         payload: Dict[str, Any] = {"messages": messages}
 
