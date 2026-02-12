@@ -4,6 +4,10 @@ Provides a zero-config persistent MemoryBackend using aiosqlite.
 Records survive process restarts and are stored in a local SQLite
 database file.
 
+Supports temporal decay via ``access_count`` and ``last_accessed``
+columns, and incorporates decay into retrieval scoring for
+Ebbinghaus-style spaced repetition.
+
 Requires the ``aiosqlite`` optional dependency::
 
     pip install contextkit[sqlite]
@@ -16,6 +20,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from contextkit.constants import (
+    DECAY_WEIGHT,
     DEFAULT_IMPORTANCE,
     DEFAULT_TOP_K,
     IMPORTANCE_WEIGHT,
@@ -32,28 +37,43 @@ CREATE TABLE IF NOT EXISTS memory_records (
     metadata TEXT NOT NULL DEFAULT '{}',
     tags TEXT NOT NULL DEFAULT '[]',
     stored_at TEXT NOT NULL,
-    importance REAL NOT NULL DEFAULT 0.5
+    importance REAL NOT NULL DEFAULT 0.5,
+    access_count INTEGER NOT NULL DEFAULT 0,
+    last_accessed TEXT
 )
 """
 
+_MIGRATE_ACCESS_COLUMNS_SQL = [
+    "ALTER TABLE memory_records ADD COLUMN access_count INTEGER NOT NULL DEFAULT 0",
+    "ALTER TABLE memory_records ADD COLUMN last_accessed TEXT",
+]
+
 _UPSERT_SQL = """
-INSERT INTO memory_records (key, content, metadata, tags, stored_at, importance)
-VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO memory_records
+    (key, content, metadata, tags, stored_at, importance, access_count, last_accessed)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(key) DO UPDATE SET
     content = excluded.content,
     metadata = excluded.metadata,
     tags = excluded.tags,
     stored_at = excluded.stored_at,
-    importance = excluded.importance
+    importance = excluded.importance,
+    access_count = excluded.access_count,
+    last_accessed = excluded.last_accessed
 """
 
 _SELECT_ALL_SQL = (
-    "SELECT key, content, metadata, tags, stored_at, importance FROM memory_records"
+    "SELECT key, content, metadata, tags, stored_at, importance,"
+    " access_count, last_accessed FROM memory_records"
 )
 
 _DELETE_SQL = "DELETE FROM memory_records WHERE key = ?"
 
 _COUNT_SQL = "SELECT COUNT(*) FROM memory_records"
+
+_UPDATE_ACCESS_SQL = (
+    "UPDATE memory_records SET access_count = ?, last_accessed = ? WHERE key = ?"
+)
 
 
 class SQLiteBackend:
@@ -62,6 +82,10 @@ class SQLiteBackend:
     Records are stored in a local SQLite database file. The schema
     is auto-created on first use. Tags and metadata are serialized
     as JSON text columns.
+
+    Retrieval scoring blends word overlap, importance, and temporal
+    decay.  Retrieved records have their access metadata updated
+    in the database for spaced repetition.
 
     Args:
         db_path: Path to the SQLite database file.
@@ -73,7 +97,11 @@ class SQLiteBackend:
         self._initialized = False
 
     async def _ensure_table(self) -> None:
-        """Create the memory_records table if it doesn't exist."""
+        """Create the memory_records table if it doesn't exist.
+
+        Also migrates existing databases by adding ``access_count``
+        and ``last_accessed`` columns if they are missing.
+        """
         if self._initialized:
             return
 
@@ -81,6 +109,14 @@ class SQLiteBackend:
 
         async with aiosqlite.connect(self._db_path) as db:
             await db.execute(_CREATE_TABLE_SQL)
+
+            # Migrate older databases that lack the decay columns
+            for sql in _MIGRATE_ACCESS_COLUMNS_SQL:
+                try:
+                    await db.execute(sql)
+                except Exception:
+                    pass  # Column already exists
+
             await db.commit()
         self._initialized = True
 
@@ -94,7 +130,7 @@ class SQLiteBackend:
     ) -> MemoryRecord:
         """Store a record in the SQLite database.
 
-        Uses INSERT OR REPLACE (upsert) semantics — storing with
+        Uses INSERT OR REPLACE (upsert) semantics -- storing with
         an existing key updates the record.
 
         Args:
@@ -131,6 +167,8 @@ class SQLiteBackend:
                     json.dumps(record.tags),
                     record.stored_at.isoformat(),
                     record.importance,
+                    record.access_count,
+                    None,
                 ),
             )
             await db.commit()
@@ -145,8 +183,9 @@ class SQLiteBackend:
     ) -> List[MemoryRecord]:
         """Retrieve records matching a query, ranked by relevance.
 
-        Uses word-overlap scoring blended with importance for ranking.
-        Optionally filters by tags (records must have ALL specified tags).
+        Uses word-overlap scoring blended with importance and temporal
+        decay for ranking.  Retrieved records have their access
+        metadata updated in the database (spaced repetition).
 
         Args:
             query: The search query string.
@@ -156,6 +195,8 @@ class SQLiteBackend:
         Returns:
             List of matching MemoryRecords, ranked by relevance.
         """
+        import aiosqlite
+
         await self._ensure_table()
 
         records = await self._fetch_all_records()
@@ -164,13 +205,31 @@ class SQLiteBackend:
         if tags:
             records = [r for r in records if all(tag in r.tags for tag in tags)]
 
-        # Score and rank by relevance
+        # Score and rank by relevance with decay
         def relevance_score(record: MemoryRecord) -> float:
-            score = word_overlap_score(query, record.content)
-            return score * WORD_MATCH_WEIGHT + record.importance * IMPORTANCE_WEIGHT
+            word_match = word_overlap_score(query, record.content)
+            decay = record.decay_factor()
+            return (
+                word_match * WORD_MATCH_WEIGHT
+                + record.importance * IMPORTANCE_WEIGHT
+                + decay * DECAY_WEIGHT
+            )
 
         records.sort(key=relevance_score, reverse=True)
-        return records[:top_k]
+        top_results = records[:top_k]
+
+        # Update access metadata on retrieved records
+        now = datetime.now(timezone.utc)
+        async with aiosqlite.connect(self._db_path) as db:
+            for record in top_results:
+                record.record_access()
+                await db.execute(
+                    _UPDATE_ACCESS_SQL,
+                    (record.access_count, now.isoformat(), record.key),
+                )
+            await db.commit()
+
+        return top_results
 
     async def delete(self, key: str) -> bool:
         """Delete a record by key.
@@ -240,12 +299,28 @@ def _row_to_record(row: Any) -> MemoryRecord:
 
     Args:
         row: A tuple of (key, content, metadata_json, tags_json,
-            stored_at_iso, importance).
+            stored_at_iso, importance, access_count, last_accessed_iso).
 
     Returns:
         A MemoryRecord instance.
     """
-    key, content, metadata_json, tags_json, stored_at_iso, importance = row
+    (
+        key,
+        content,
+        metadata_json,
+        tags_json,
+        stored_at_iso,
+        importance,
+        access_count,
+        last_accessed_iso,
+    ) = row
+
+    last_accessed = (
+        datetime.fromisoformat(last_accessed_iso)
+        if last_accessed_iso
+        else None
+    )
+
     return MemoryRecord(
         key=key,
         content=content,
@@ -253,4 +328,6 @@ def _row_to_record(row: Any) -> MemoryRecord:
         tags=json.loads(tags_json),
         stored_at=datetime.fromisoformat(stored_at_iso),
         importance=importance,
+        access_count=access_count,
+        last_accessed=last_accessed,
     )
