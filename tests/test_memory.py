@@ -1,10 +1,13 @@
-"""Tests for memory management (Phase 1)."""
+"""Tests for memory management: records, backends, short-term and
+long-term memory, conversation trimming, and temporal decay.
+"""
 
 from __future__ import annotations
 
 import asyncio
 import os
 import tempfile
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -372,3 +375,109 @@ class TestSQLiteBackend:
             blocks = asyncio.run(ltm.retrieve_as_blocks("Python"))
             assert len(blocks) >= 1
             assert blocks[0].type.value == "long_term_memory"
+
+
+# ---------------------------------------------------------------------------
+# Temporal memory decay (Ebbinghaus forgetting curve)
+# ---------------------------------------------------------------------------
+
+
+class TestTemporalMemoryDecay:
+    """MemoryRecord.decay_factor models exponential forgetting with
+    spaced-repetition reinforcement on repeated access.
+    """
+
+    def test_fresh_record_has_no_decay(self) -> None:
+        """A just-created record has a decay factor of 1.0."""
+        now = datetime.now(timezone.utc)
+        record = MemoryRecord(key="fresh", content="test", stored_at=now)
+        assert record.decay_factor(now=now) == 1.0
+
+    def test_one_half_life_yields_half_retention(self) -> None:
+        """After exactly one half-life, decay factor is approximately 0.5."""
+        now = datetime.now(timezone.utc)
+        one_week_ago = now - timedelta(hours=168)
+        record = MemoryRecord(key="week_old", content="test", stored_at=one_week_ago)
+        factor = record.decay_factor(half_life_hours=168.0, now=now)
+        assert 0.4 <= factor <= 0.6
+
+    def test_repeated_access_slows_decay(self) -> None:
+        """More access_count extends the effective half-life (spaced repetition)."""
+        now = datetime.now(timezone.utc)
+        one_week_ago = now - timedelta(hours=168)
+
+        never_accessed = MemoryRecord(
+            key="never_accessed", content="test", stored_at=one_week_ago
+        )
+        frequently_accessed = MemoryRecord(
+            key="frequently_accessed", content="test", stored_at=one_week_ago, access_count=5
+        )
+
+        decay_without_access = never_accessed.decay_factor(half_life_hours=168.0, now=now)
+        decay_with_access = frequently_accessed.decay_factor(half_life_hours=168.0, now=now)
+
+        assert decay_with_access > decay_without_access
+
+    def test_record_access_increments_count_and_timestamp(self) -> None:
+        """record_access() updates access_count and last_accessed."""
+        record = MemoryRecord(key="track_access", content="test")
+        assert record.access_count == 0
+        assert record.last_accessed is None
+
+        record.record_access()
+        assert record.access_count == 1
+        assert record.last_accessed is not None
+
+    def test_decay_uses_last_accessed_over_stored_at(self) -> None:
+        """If last_accessed is set, it becomes the decay reference point."""
+        now = datetime.now(timezone.utc)
+        old_stored_at = now - timedelta(hours=1000)
+        recent_access = now - timedelta(hours=1)
+
+        record = MemoryRecord(
+            key="recently_accessed",
+            content="test",
+            stored_at=old_stored_at,
+            last_accessed=recent_access,
+        )
+        factor = record.decay_factor(half_life_hours=168.0, now=now)
+        assert factor > 0.99
+
+    def test_decay_factor_never_reaches_zero(self) -> None:
+        """Even very old records have a positive (non-zero) decay factor."""
+        now = datetime.now(timezone.utc)
+        ten_years_ago = now - timedelta(days=365 * 10)
+        record = MemoryRecord(key="ancient", content="test", stored_at=ten_years_ago)
+        factor = record.decay_factor(half_life_hours=168.0, now=now)
+        assert factor > 0.0
+
+
+# ---------------------------------------------------------------------------
+# In-memory backend decay integration
+# ---------------------------------------------------------------------------
+
+
+class TestInMemoryBackendWithDecay:
+    """InMemoryBackend retrieval should integrate temporal decay into ranking."""
+
+    def test_retrieval_updates_access_metadata(self) -> None:
+        """Retrieved records have their access_count and last_accessed updated."""
+        backend = InMemoryBackend()
+        asyncio.run(backend.store("python_tips", "python programming"))
+        results = asyncio.run(backend.retrieve("python"))
+        assert results[0].access_count == 1
+        assert results[0].last_accessed is not None
+
+    def test_recent_record_ranked_above_stale_record(self) -> None:
+        """A recently stored record ranks higher than an older identical one."""
+        backend = InMemoryBackend()
+        now = datetime.now(timezone.utc)
+
+        asyncio.run(backend.store("stale_record", "python tips"))
+        asyncio.run(backend.store("fresh_record", "python tips"))
+
+        backend._records["stale_record"].stored_at = now - timedelta(days=30)
+        backend._records["fresh_record"].stored_at = now
+
+        results = asyncio.run(backend.retrieve("python"))
+        assert results[0].key == "fresh_record"

@@ -264,3 +264,43 @@ class TestContextAssembler:
         report = assembler.report
         assert report is not None
         assert report.total_tokens == 0
+
+
+# ---------------------------------------------------------------------------
+# Async assembler
+# ---------------------------------------------------------------------------
+
+
+class TestAsyncContextAssembler:
+    """ContextAssembler.aassemble() is an awaitable mirror of assemble()."""
+
+    async def test_aassemble_returns_populated_window(self) -> None:
+        """aassemble should return the same window with blocks added."""
+        window = ContextWindow(max_tokens=10_000)
+        assembler = ContextAssembler(window)
+        blocks = [
+            ContextBlock(
+                type=BlockType.USER_CONTEXT,
+                content="hello world",
+                priority=80,
+                name="greeting",
+            )
+        ]
+        result = await assembler.aassemble(blocks)
+        assert result is window
+        assert len(result.blocks) == 1
+
+    async def test_aassemble_matches_sync_assemble(self) -> None:
+        """Async and sync assembly should produce identical windows."""
+        blocks = [
+            ContextBlock(type=BlockType.USER_CONTEXT, content="hello", priority=80, name="first_block"),
+            ContextBlock(type=BlockType.USER_CONTEXT, content="world", priority=60, name="second_block"),
+        ]
+        sync_window = ContextWindow(max_tokens=10_000)
+        ContextAssembler(sync_window).assemble(list(blocks))
+
+        async_window = ContextWindow(max_tokens=10_000)
+        await ContextAssembler(async_window).aassemble(list(blocks))
+
+        assert sync_window.token_count == async_window.token_count
+        assert len(sync_window.blocks) == len(async_window.blocks)

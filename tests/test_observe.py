@@ -1,10 +1,35 @@
-"""Tests for provenance tracking (Origin and Mutation models)."""
+"""Tests for observability: provenance tracking (Origin, Mutation),
+context quality scoring, and context sufficiency checking.
+"""
 
 from __future__ import annotations
 
 from datetime import datetime
 
+from contextkit.core import BlockType, ContextBlock
+from contextkit.observe.events import ContextEvent, clear_handlers, register_handler
 from contextkit.observe.provenance import Mutation, Origin
+from contextkit.observe.quality import QualityScorer
+from contextkit.observe.quality_models import PositionScore, QualityReport
+from contextkit.observe.sufficiency import SufficiencyChecker
+from contextkit.observe.sufficiency_models import SufficiencyResult
+
+
+def _make_block(
+    name: str,
+    content: str = "test content",
+    priority: int = 50,
+    block_type: BlockType = BlockType.USER_CONTEXT,
+    origin: Origin | None = None,
+) -> ContextBlock:
+    """Create a ContextBlock with sensible defaults for testing."""
+    return ContextBlock(
+        type=block_type,
+        content=content,
+        priority=priority,
+        name=name,
+        origin=origin,
+    )
 
 
 class TestOrigin:
@@ -213,3 +238,154 @@ class TestMutation:
         )
         json_str = mutation.model_dump_json()
         assert "test" in json_str
+
+
+# ---------------------------------------------------------------------------
+# Context quality scoring (positional attention analysis)
+# ---------------------------------------------------------------------------
+
+
+class TestContextQualityScorer:
+    """QualityScorer evaluates how well high-priority content aligns with
+    high-attention positions in the context window.
+    """
+
+    def test_empty_block_list_yields_perfect_score(self) -> None:
+        """An empty block list has nothing misplaced, so score is 1.0."""
+        scorer = QualityScorer()
+        report = scorer.score([])
+        assert report.overall_score == 1.0
+        assert report.positional_scores == []
+        assert report.warnings == []
+
+    def test_single_block_receives_full_attention(self) -> None:
+        """A lone block should receive attention_weight of 1.0."""
+        scorer = QualityScorer()
+        blocks = [_make_block("only_block", priority=80)]
+        report = scorer.score(blocks)
+        assert report.overall_score > 0.9
+        assert len(report.positional_scores) == 1
+        assert report.positional_scores[0].attention_weight == 1.0
+
+    def test_middle_position_receives_lower_attention(self) -> None:
+        """Blocks in the middle of a long sequence have lower attention weight."""
+        scorer = QualityScorer()
+        blocks = [_make_block(f"block_{i}", priority=50) for i in range(11)]
+        report = scorer.score(blocks)
+        middle_block = report.positional_scores[5]
+        first_block = report.positional_scores[0]
+        assert middle_block.attention_weight < first_block.attention_weight
+
+    def test_warns_when_high_priority_block_in_low_attention_position(self) -> None:
+        """A high-priority block buried in a low-attention position triggers a warning."""
+        scorer = QualityScorer(
+            high_priority_threshold=70,
+            low_attention_threshold=0.5,
+        )
+        blocks = [_make_block(f"filler_{i}", priority=30) for i in range(11)]
+        blocks[5] = _make_block("important_block", priority=90)
+        report = scorer.score(blocks)
+        assert len(report.warnings) >= 1
+        assert "important_block" in report.warnings[0]
+
+    def test_returns_pydantic_model_types(self) -> None:
+        """Report and position scores are proper Pydantic models."""
+        scorer = QualityScorer()
+        blocks = [_make_block("single_block", priority=50)]
+        report = scorer.score(blocks)
+        assert isinstance(report, QualityReport)
+        assert isinstance(report.positional_scores[0], PositionScore)
+
+    def test_overall_score_stays_within_unit_range(self) -> None:
+        """Overall score is always between 0.0 and 1.0."""
+        scorer = QualityScorer()
+        blocks = [_make_block(f"block_{i}", priority=50) for i in range(20)]
+        report = scorer.score(blocks)
+        assert 0.0 <= report.overall_score <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# Context sufficiency checking
+# ---------------------------------------------------------------------------
+
+
+class TestContextSufficiencyChecker:
+    """SufficiencyChecker determines whether the assembled context
+    adequately covers the user's query.
+    """
+
+    def test_context_covering_query_is_sufficient(self) -> None:
+        """Blocks that contain query keywords produce a sufficient result."""
+        checker = SufficiencyChecker(min_query_coverage=0.5)
+        blocks = [
+            _make_block("python_tutorial", content="python programming language tutorial"),
+        ]
+        result = checker.check("python programming", blocks)
+        assert result.sufficient is True
+        assert result.query_coverage >= 0.5
+
+    def test_context_missing_query_terms_is_insufficient(self) -> None:
+        """Blocks unrelated to the query produce an insufficient result."""
+        checker = SufficiencyChecker(min_query_coverage=0.8)
+        blocks = [
+            _make_block("weather_block", content="weather forecast"),
+        ]
+        result = checker.check("python programming tutorial", blocks)
+        assert result.sufficient is False
+        assert len(result.suggestions) >= 1
+
+    def test_rag_relevance_scores_factor_into_check(self) -> None:
+        """RAG blocks with origin relevance scores affect avg_relevance."""
+        checker = SufficiencyChecker()
+        blocks = [
+            _make_block(
+                "rag_python_examples",
+                content="python code examples",
+                block_type=BlockType.RAG,
+                origin=Origin(
+                    source="rag",
+                    details={"relevance_score": 0.9},
+                ),
+            ),
+        ]
+        result = checker.check("python code", blocks)
+        assert result.avg_relevance > 0.0
+
+    def test_multiple_source_types_detected(self) -> None:
+        """Blocks from different sources show up in source_types."""
+        checker = SufficiencyChecker()
+        blocks = [
+            _make_block("system_instructions", content="system instructions", block_type=BlockType.SYSTEM_PROMPT),
+            _make_block("rag_content", content="retrieved content", block_type=BlockType.RAG),
+            _make_block("memory_pref", content="user preference", block_type=BlockType.LONG_TERM_MEMORY),
+        ]
+        result = checker.check("instructions", blocks)
+        assert len(result.source_types) >= 3
+
+    def test_emits_event_when_context_insufficient(self) -> None:
+        """An insufficient result fires a CONTEXT_INSUFFICIENT event."""
+        clear_handlers()
+        captured_events = []
+        register_handler(
+            ContextEvent.CONTEXT_INSUFFICIENT,
+            lambda event: captured_events.append(event),
+        )
+
+        checker = SufficiencyChecker(min_query_coverage=0.99)
+        blocks = [_make_block("unrelated_block", content="unrelated")]
+        checker.check("specific technical query", blocks)
+
+        assert len(captured_events) == 1
+        clear_handlers()
+
+    def test_returns_sufficiency_result_model(self) -> None:
+        """The return value is a SufficiencyResult Pydantic model."""
+        checker = SufficiencyChecker()
+        result = checker.check("test", [_make_block("test_block", content="test")])
+        assert isinstance(result, SufficiencyResult)
+
+    def test_confidence_stays_within_unit_range(self) -> None:
+        """Confidence is always between 0.0 and 1.0."""
+        checker = SufficiencyChecker()
+        result = checker.check("test query", [_make_block("test_block", content="test")])
+        assert 0.0 <= result.confidence <= 1.0
