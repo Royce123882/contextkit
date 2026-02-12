@@ -3,16 +3,16 @@
 Retrieves chunks from a backend, ranks them, deduplicates,
 and converts to ContextBlocks with full provenance tracking.
 Supports budget-aware retrieval (stops when token limit is reached).
+
+Includes an optional feedback loop for tracking which retrieved
+blocks were useful, enabling iterative quality improvement.
 """
 
 from __future__ import annotations
 
 import logging
-from typing import List
+from typing import Any, Dict, List
 
-logger = logging.getLogger("contextkit")
-
-from contextkit.utils.token_counting import count as count_tokens
 from contextkit.constants import (
     DEFAULT_ENCODING,
     DEFAULT_SIMILARITY_THRESHOLD,
@@ -23,6 +23,9 @@ from contextkit.core import BlockType, ContextBlock
 from contextkit.observe.provenance import Origin
 from contextkit.rag.chunk import Chunk, RetrieverBackend
 from contextkit.utils.text_similarity import word_overlap_similarity
+from contextkit.utils.token_counting import count as count_tokens
+
+logger = logging.getLogger("contextkit")
 
 
 class RAGContext:
@@ -45,6 +48,7 @@ class RAGContext:
     ) -> None:
         self._retriever = retriever
         self._retriever_name = retriever_name
+        self._feedback: Dict[str, List[bool]] = {}
 
     async def retrieve(
         self,
@@ -122,6 +126,46 @@ class RAGContext:
 
         logger.info("RAG retrieved %d blocks (%s tokens)", len(blocks), f"{total_tokens:,}")
         return blocks
+
+    def record_feedback(self, block: ContextBlock, useful: bool) -> None:
+        """Record whether a retrieved block was useful for the task.
+
+        Feedback is keyed by block name and the original query (from
+        the block's Origin). This enables per-query-per-block
+        tracking of retrieval quality.
+
+        Args:
+            block: The ContextBlock to record feedback for.
+            useful: True if the block was useful, False otherwise.
+        """
+        query = ""
+        if block.origin is not None:
+            query = block.origin.details.get("query", "")
+        feedback_key = f"{block.display_name}:{query}"
+        self._feedback.setdefault(feedback_key, []).append(useful)
+        logger.debug(
+            "Recorded RAG feedback: %s=%s (key=%s)",
+            block.display_name,
+            useful,
+            feedback_key,
+        )
+
+    def feedback_summary(self) -> Dict[str, float]:
+        """Return usefulness ratio per query-block pair.
+
+        Returns:
+            Dict mapping ``"block_name:query"`` to the fraction
+            of positive feedback (0.0-1.0).
+        """
+        return {
+            key: sum(values) / len(values)
+            for key, values in self._feedback.items()
+            if values
+        }
+
+    def clear_feedback(self) -> None:
+        """Clear all recorded feedback."""
+        self._feedback.clear()
 
     async def health_check(self) -> bool:
         """Check if the retriever backend is healthy."""

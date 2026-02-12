@@ -8,7 +8,13 @@ formatting.
 
 __version__ = "0.1.0"
 
-from contextkit.adapters import AnthropicAdapter, OpenAIAdapter
+from contextkit.adapters import (
+    AnthropicAdapter,
+    BedrockAdapter,
+    LiteLLMAdapter,
+    OllamaAdapter,
+    OpenAIAdapter,
+)
 from contextkit.assembler import AssemblyReport, BlockDecision, ContextAssembler
 from contextkit.core import (
     BlockType,
@@ -50,6 +56,9 @@ __all__ = [
     "ContextAssembler",
     # Adapters
     "AnthropicAdapter",
+    "BedrockAdapter",
+    "LiteLLMAdapter",
+    "OllamaAdapter",
     "OpenAIAdapter",
     # Pipeline
     "CompactStep",
