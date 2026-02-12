@@ -4,6 +4,9 @@ Estimates the "findability" of key information given its position
 in the context window.  High-priority blocks buried in the middle
 of the sequence are flagged as at-risk.
 
+Extended with signal-to-noise ratio, redundancy detection, and
+information density metrics.
+
 Research basis: "Lost in the Middle" (Liu et al., 2023) -- LLMs
 show a U-shaped performance curve where information at the start
 and end is utilised effectively but middle content is often missed.
@@ -17,6 +20,7 @@ from typing import List
 from contextkit.constants import HIGH_PRIORITY_THRESHOLD, LOW_ATTENTION_THRESHOLD
 from contextkit.core import ContextBlock
 from contextkit.observe.quality_models import PositionScore, QualityReport
+from contextkit.utils.text_similarity import word_overlap_similarity
 
 
 class QualityScorer:
@@ -25,6 +29,9 @@ class QualityScorer:
     Computes a per-block attention weight using a U-shaped curve
     that mirrors empirical LLM attention patterns, then flags
     high-priority blocks placed in low-attention positions.
+
+    Also computes signal-to-noise ratio, redundancy, and
+    information density metrics.
 
     Args:
         high_priority_threshold: Blocks at or above this priority
@@ -48,25 +55,55 @@ class QualityScorer:
             blocks: Ordered list of context blocks.
 
         Returns:
-            A :class:`QualityReport` with overall score, per-block
-            position scores, and human-readable warnings.
+            A QualityReport with overall score, per-block position
+            scores, extended metrics, and human-readable warnings.
         """
         total = len(blocks)
         if total == 0:
             return QualityReport(
-                overall_score=1.0, positional_scores=[], warnings=[]
+                overall_score=1.0,
+                positional_scores=[],
+                warnings=[],
+                signal_to_noise_ratio=1.0,
+                redundancy_score=0.0,
+                information_density=0.0,
             )
 
-        positional_scores: List[PositionScore] = []
-        warnings: List[str] = []
-        weighted_sum = 0.0
-        weight_total = 0.0
+        positional_scores = self._compute_positional_scores(blocks, total)
+        warnings = self._collect_warnings(positional_scores)
+        overall = self._compute_overall_score(blocks, positional_scores)
+        signal_to_noise = self._compute_signal_to_noise(blocks)
+        redundancy = self._compute_redundancy(blocks)
+        density = self._compute_information_density(blocks)
 
+        return QualityReport(
+            overall_score=round(min(1.0, overall), 3),
+            positional_scores=positional_scores,
+            warnings=warnings,
+            signal_to_noise_ratio=round(signal_to_noise, 3),
+            redundancy_score=round(redundancy, 3),
+            information_density=round(density, 3),
+        )
+
+    def _compute_positional_scores(
+        self,
+        blocks: List[ContextBlock],
+        total: int,
+    ) -> List[PositionScore]:
+        """Compute per-block positional attention scores.
+
+        Args:
+            blocks: Ordered list of context blocks.
+            total: Total number of blocks.
+
+        Returns:
+            List of PositionScore entries.
+        """
+        scores: List[PositionScore] = []
         for idx, block in enumerate(blocks):
             attention = _u_curve_weight(idx, total)
             risk = self._assess_risk(block.priority, attention)
-
-            positional_scores.append(
+            scores.append(
                 PositionScore(
                     block_name=block.display_name,
                     position=idx,
@@ -76,28 +113,144 @@ class QualityScorer:
                     risk=risk,
                 )
             )
+        return scores
 
-            # Weight the contribution by priority (important blocks count more)
-            block_weight = block.priority / 100.0
-            weighted_sum += attention * block_weight
-            weight_total += block_weight
+    def _collect_warnings(
+        self,
+        positional_scores: List[PositionScore],
+    ) -> List[str]:
+        """Collect human-readable warnings for high-risk blocks.
 
-            if risk == "high":
+        Args:
+            positional_scores: Per-block position analysis.
+
+        Returns:
+            List of warning strings.
+        """
+        warnings: List[str] = []
+        for score in positional_scores:
+            if score.risk == "high":
                 warnings.append(
-                    f"Block '{block.display_name}' (priority={block.priority}) "
-                    f"is at position {idx}/{total} "
-                    f"(attention={attention:.2f}, risk=high)"
+                    f"Block '{score.block_name}' (priority={score.priority}) "
+                    f"is at position {score.position}/{score.total_blocks} "
+                    f"(attention={score.attention_weight:.2f}, risk=high)"
                 )
+        return warnings
 
-        overall = weighted_sum / weight_total if weight_total > 0 else 1.0
-        return QualityReport(
-            overall_score=round(min(1.0, overall), 3),
-            positional_scores=positional_scores,
-            warnings=warnings,
+    def _compute_overall_score(
+        self,
+        blocks: List[ContextBlock],
+        positional_scores: List[PositionScore],
+    ) -> float:
+        """Compute weighted overall quality score.
+
+        Args:
+            blocks: The context blocks.
+            positional_scores: Per-block position scores.
+
+        Returns:
+            Weighted score between 0.0 and 1.0.
+        """
+        weighted_sum = 0.0
+        weight_total = 0.0
+        for block, pos_score in zip(blocks, positional_scores):
+            block_weight = block.priority / 100.0
+            weighted_sum += pos_score.attention_weight * block_weight
+            weight_total += block_weight
+        return weighted_sum / weight_total if weight_total > 0 else 1.0
+
+    def _compute_signal_to_noise(self, blocks: List[ContextBlock]) -> float:
+        """Compute the signal-to-noise ratio of the context.
+
+        Signal = tokens in high-priority blocks.
+        Noise = tokens in low-priority blocks.
+
+        Args:
+            blocks: The context blocks.
+
+        Returns:
+            Ratio between 0.0 and 1.0 (1.0 = all signal, no noise).
+        """
+        signal_tokens = sum(
+            b.token_count
+            for b in blocks
+            if b.priority >= self._priority_threshold
         )
+        total_tokens = sum(b.token_count for b in blocks)
+        if total_tokens == 0:
+            return 1.0
+        return signal_tokens / total_tokens
+
+    def _compute_redundancy(self, blocks: List[ContextBlock]) -> float:
+        """Compute the fraction of blocks that are near-duplicates.
+
+        A block is considered redundant if its word overlap with any
+        previously seen block exceeds 80%.
+
+        Args:
+            blocks: The context blocks.
+
+        Returns:
+            Fraction between 0.0 and 1.0 (lower is better).
+        """
+        if len(blocks) <= 1:
+            return 0.0
+
+        seen_contents: List[str] = []
+        redundant_count = 0
+
+        for block in blocks:
+            if not isinstance(block.content, str):
+                continue
+            is_redundant = False
+            for seen in seen_contents:
+                if word_overlap_similarity(block.content, seen) > 0.8:
+                    is_redundant = True
+                    break
+            if is_redundant:
+                redundant_count += 1
+            else:
+                seen_contents.append(block.content)
+
+        string_block_count = sum(
+            1 for b in blocks if isinstance(b.content, str)
+        )
+        return redundant_count / max(string_block_count, 1)
+
+    def _compute_information_density(
+        self,
+        blocks: List[ContextBlock],
+    ) -> float:
+        """Compute information density as unique terms per token.
+
+        Higher density means more varied vocabulary (more informative).
+
+        Args:
+            blocks: The context blocks.
+
+        Returns:
+            Density score (higher is better).
+        """
+        all_words: set[str] = set()
+        total_tokens = 0
+        for block in blocks:
+            if isinstance(block.content, str):
+                all_words.update(block.content.lower().split())
+                total_tokens += block.token_count
+        if total_tokens == 0:
+            return 0.0
+        return len(all_words) / total_tokens
 
     def _assess_risk(self, priority: int, attention_weight: float) -> str:
-        """Classify risk level for a block given its priority and position."""
+        """Classify risk level for a block given its priority and position.
+
+        Args:
+            priority: The block's priority value.
+            attention_weight: Estimated attention at this position.
+
+        Returns:
+            Risk level: "low", "medium", or "high".
+        """
         if priority >= self._priority_threshold:
             if attention_weight < self._attention_threshold:
                 return "high"

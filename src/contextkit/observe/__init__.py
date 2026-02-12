@@ -12,12 +12,15 @@ from typing import TYPE_CHECKING
 from contextkit.observe.provenance import Mutation, Origin
 
 if TYPE_CHECKING:
+    from contextkit.observe.drift import DriftDetector
     from contextkit.observe.quality import QualityScorer
-    from contextkit.observe.quality_models import PositionScore, QualityReport
+    from contextkit.observe.quality_models import DriftReport, PositionScore, QualityReport
     from contextkit.observe.sufficiency import SufficiencyChecker
     from contextkit.observe.sufficiency_models import SufficiencyResult
 
 __all__ = [
+    "DriftDetector",
+    "DriftReport",
     "Mutation",
     "Origin",
     "PositionScore",
@@ -28,6 +31,8 @@ __all__ = [
 ]
 
 _LAZY_IMPORTS = {
+    "DriftDetector": "contextkit.observe.drift",
+    "DriftReport": "contextkit.observe.quality_models",
     "QualityScorer": "contextkit.observe.quality",
     "PositionScore": "contextkit.observe.quality_models",
     "QualityReport": "contextkit.observe.quality_models",

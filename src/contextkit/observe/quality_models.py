@@ -46,6 +46,12 @@ class QualityReport(BaseModel):
         positional_scores: Per-block position analysis.
         warnings: Human-readable warnings for blocks at risk
             of being missed by the model.
+        signal_to_noise_ratio: Ratio of high-priority token mass
+            to total token mass (0.0-1.0).
+        redundancy_score: Fraction of blocks that are near-duplicates
+            of another block (0.0-1.0, lower is better).
+        information_density: Ratio of unique terms to total tokens
+            across all blocks (higher = more diverse vocabulary).
     """
 
     overall_score: float = Field(
@@ -56,4 +62,49 @@ class QualityReport(BaseModel):
     )
     warnings: List[str] = Field(
         description="Human-readable warnings for blocks at risk of being missed."
+    )
+    signal_to_noise_ratio: float = Field(
+        default=0.0,
+        description="Ratio of high-priority tokens to total tokens (0.0-1.0).",
+    )
+    redundancy_score: float = Field(
+        default=0.0,
+        description="Fraction of blocks that are near-duplicates (0.0-1.0, lower is better).",
+    )
+    information_density: float = Field(
+        default=0.0,
+        description="Unique terms per token across all blocks (higher = more diverse).",
+    )
+
+
+class DriftReport(BaseModel):
+    """Report from drift detection across conversation turns.
+
+    Attributes:
+        current_score: Quality score for the current turn.
+        drift: Magnitude of quality degradation since the beginning.
+            Positive values mean quality has dropped.
+        drifting: Whether the drift exceeds the configured threshold.
+        turn_count: Number of turns recorded so far.
+        suggestion: Actionable suggestion if drift is detected.
+    """
+
+    current_score: float = Field(
+        description="Quality score for the current turn.",
+    )
+    drift: float = Field(
+        default=0.0,
+        description="Quality degradation since the beginning (positive = worse).",
+    )
+    drifting: bool = Field(
+        default=False,
+        description="Whether drift exceeds the configured threshold.",
+    )
+    turn_count: int = Field(
+        default=0,
+        description="Number of turns recorded so far.",
+    )
+    suggestion: str = Field(
+        default="",
+        description="Actionable suggestion if drift is detected.",
     )

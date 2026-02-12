@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from typing import List
+from typing import Any, List
 
 from contextkit.utils.text_similarity import word_overlap_score
 from contextkit.utils.token_counting import count as count_tokens
@@ -55,7 +55,9 @@ class CompactStep(PipelineStep):
         target_ratio: float = DEFAULT_COMPACT_TARGET_RATIO,
         min_tokens: int = DEFAULT_COMPACT_MIN_TOKENS,
         max_info_loss: float = 0.5,
+        **kwargs: Any,
     ) -> None:
+        super().__init__(**kwargs)
         self._compactor = compactor or self._default_compactor
         self._target_ratio = target_ratio
         self._min_tokens = min_tokens

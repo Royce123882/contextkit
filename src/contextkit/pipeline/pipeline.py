@@ -173,10 +173,11 @@ class ContextPipeline:
         return window
 
     async def arun(self, window: ContextWindow) -> ContextWindow:
-        """Async version of :meth:`run`.
+        """Async version of :meth:`run` with true async step execution.
 
-        Identical behaviour but ``await``-able so it can be used in
-        async application code without blocking the event loop.
+        Uses each step's ``async_process()`` method, allowing steps
+        that need async I/O (e.g. LLM-based summarization) to yield
+        control properly.
 
         Args:
             window: The ContextWindow to optimize.
@@ -184,17 +185,51 @@ class ContextPipeline:
         Returns:
             The same ContextWindow (modified in place).
         """
-        return self.run(window)
+        step_names = ", ".join(s.name for s in self._steps)
+        logger.info(
+            "Running async pipeline (%d steps: %s)", len(self._steps), step_names
+        )
+
+        blocks = list(window.blocks)
+        total_tokens_before = sum(b.token_count for b in blocks)
+
+        step_reports: List[StepReport] = []
+        for step in self._steps:
+            if not step.should_run(blocks):
+                logger.debug("Skipping step '%s' (guard returned False)", step.name)
+                continue
+            report, blocks = await self._execute_step_async(step, blocks)
+            step_reports.append(report)
+
+        window.replace_blocks(blocks)
+        total_tokens_after = sum(b.token_count for b in blocks)
+
+        self._last_report = self._build_report(
+            step_reports, total_tokens_before, total_tokens_after, window
+        )
+        self._emit_pipeline_complete()
+
+        saved = total_tokens_before - total_tokens_after
+        logger.info(
+            "Async pipeline complete: %s -> %s tokens (saved %s)",
+            f"{total_tokens_before:,}",
+            f"{total_tokens_after:,}",
+            f"{saved:,}",
+        )
+        return window
 
     def _execute_all_steps(
         self,
         blocks: List[ContextBlock],
         window: ContextWindow,
     ) -> List[StepReport]:
-        """Execute all pipeline steps and collect reports."""
+        """Execute all pipeline steps synchronously and collect reports."""
         step_reports: List[StepReport] = []
 
         for step in self._steps:
+            if not step.should_run(blocks):
+                logger.debug("Skipping step '%s' (guard returned False)", step.name)
+                continue
             report, blocks[:] = self._execute_step(step, blocks)
             step_reports.append(report)
 
@@ -206,12 +241,69 @@ class ContextPipeline:
         step: PipelineStep,
         blocks: List[ContextBlock],
     ) -> Tuple[StepReport, List[ContextBlock]]:
-        """Execute a single pipeline step and return its report."""
+        """Execute a single pipeline step synchronously and return its report."""
         tokens_before = sum(b.token_count for b in blocks)
         blocks_before_count = len(blocks)
 
         logger.debug("Running step '%s' on %d blocks", step.name, blocks_before_count)
         processed_blocks = step.process(blocks)
+
+        tokens_after = sum(b.token_count for b in processed_blocks)
+        blocks_after_count = len(processed_blocks)
+
+        if tokens_before != tokens_after:
+            logger.debug(
+                "Step '%s': %s -> %s tokens, %d blocks -> %d blocks",
+                step.name,
+                f"{tokens_before:,}",
+                f"{tokens_after:,}",
+                blocks_before_count,
+                blocks_after_count,
+            )
+
+        report = StepReport(
+            step_name=step.name,
+            blocks_modified=abs(blocks_before_count - blocks_after_count),
+            blocks_removed=blocks_before_count - blocks_after_count,
+            tokens_before=tokens_before,
+            tokens_after=tokens_after,
+            tokens_saved=tokens_before - tokens_after,
+        )
+
+        emit(
+            PipelineEventData(
+                event=ContextEvent.PIPELINE_STEP,
+                step_name=step.name,
+                tokens_before=tokens_before,
+                tokens_after=tokens_after,
+            )
+        )
+
+        return report, processed_blocks
+
+    async def _execute_step_async(
+        self,
+        step: PipelineStep,
+        blocks: List[ContextBlock],
+    ) -> Tuple[StepReport, List[ContextBlock]]:
+        """Execute a single pipeline step asynchronously.
+
+        Uses the step's ``async_process()`` method for true async support.
+
+        Args:
+            step: The pipeline step to execute.
+            blocks: Current list of context blocks.
+
+        Returns:
+            Tuple of (step report, processed blocks).
+        """
+        tokens_before = sum(b.token_count for b in blocks)
+        blocks_before_count = len(blocks)
+
+        logger.debug(
+            "Running async step '%s' on %d blocks", step.name, blocks_before_count
+        )
+        processed_blocks = await step.async_process(blocks)
 
         tokens_after = sum(b.token_count for b in processed_blocks)
         blocks_after_count = len(processed_blocks)

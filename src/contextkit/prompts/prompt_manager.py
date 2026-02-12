@@ -1,4 +1,8 @@
-"""Prompt template management."""
+"""Prompt template management.
+
+Supports ``{{variable}}`` interpolation with optional strict mode
+that raises TemplateRenderError on missing variables.
+"""
 
 from __future__ import annotations
 
@@ -8,10 +12,13 @@ from typing import Any, Dict, List
 
 from contextkit.constants import PRIORITY_SYSTEM_PROMPT
 from contextkit.core import BlockType, ContextBlock
+from contextkit.exceptions import TemplateRenderError
 from contextkit.observe.provenance import Origin
 from contextkit.prompts.prompt_version import PromptVersion
 
 logger = logging.getLogger("contextkit")
+
+_VARIABLE_PATTERN = re.compile(r"\{\{(\w+)\}\}")
 
 
 class PromptManager:
@@ -106,6 +113,7 @@ class PromptManager:
         name: str,
         version: str | None = None,
         priority: int = PRIORITY_SYSTEM_PROMPT,
+        strict: bool = False,
         **variables: Any,
     ) -> ContextBlock:
         """Render a template into a ContextBlock.
@@ -117,10 +125,16 @@ class PromptManager:
             name: Template name.
             version: Specific version (None = latest).
             priority: Block priority.
+            strict: If True, raise TemplateRenderError when variables
+                are missing. If False (default), log a warning and
+                leave placeholders intact.
             **variables: Template variables.
 
         Returns:
             A ContextBlock with rendered content and Origin.
+
+        Raises:
+            TemplateRenderError: If strict=True and variables are missing.
         """
         resolved_template = self.get_template(name, version)
         logger.info(
@@ -129,7 +143,9 @@ class PromptManager:
             resolved_template.version,
             len(variables),
         )
-        content = _interpolate(resolved_template.template, variables)
+        content = _interpolate(
+            resolved_template.template, variables, strict=strict, template_name=name
+        )
 
         origin = Origin(
             source="prompt",
@@ -276,24 +292,50 @@ class PromptManager:
         return [v.version for v in self._templates[name]]
 
 
-_VARIABLE_PATTERN = re.compile(r"\{\{(\w+)\}\}")
+def _interpolate(
+    template: str,
+    variables: Dict[str, Any],
+    strict: bool = False,
+    template_name: str = "",
+) -> str:
+    """Replace ``{{variable}}`` placeholders with values.
 
-
-def _interpolate(template: str, variables: Dict[str, Any]) -> str:
-    """Replace {{variable}} placeholders with values.
+    Collects any missing variable names and either raises
+    TemplateRenderError (strict mode) or logs a warning.
 
     Args:
-        template: Template string with {{variable}} placeholders.
+        template: Template string with ``{{variable}}`` placeholders.
         variables: Variable name-to-value mapping.
+        strict: If True, raise on missing variables.
+        template_name: Template name for error messages.
 
     Returns:
         The interpolated string.
-    """
 
-    def replacer(match: re.Match[str]) -> str:
-        var_name = match.group(1)
-        if var_name in variables:
-            return str(variables[var_name])
+    Raises:
+        TemplateRenderError: If strict is True and variables are missing.
+    """
+    missing_variables: List[str] = []
+
+    def _replacer(match: re.Match[str]) -> str:
+        variable_name = match.group(1)
+        if variable_name in variables:
+            return str(variables[variable_name])
+        missing_variables.append(variable_name)
         return match.group(0)
 
-    return _VARIABLE_PATTERN.sub(replacer, template)
+    result = _VARIABLE_PATTERN.sub(_replacer, template)
+
+    if missing_variables and strict:
+        raise TemplateRenderError(
+            template_name=template_name or "(unknown)",
+            missing_variables=missing_variables,
+        )
+    if missing_variables:
+        logger.warning(
+            "Unresolved template variables in '%s': %s",
+            template_name,
+            missing_variables,
+        )
+
+    return result

@@ -12,7 +12,7 @@ query-relevant content.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 from contextkit.constants import DEFAULT_RELEVANCE_WEIGHT, MAX_PRIORITY
 from contextkit.core import ContextBlock
@@ -49,7 +49,9 @@ class TrimStep(PipelineStep):
         query: str | None = None,
         relevance_weight: float = DEFAULT_RELEVANCE_WEIGHT,
         score_fn: Callable[[str, str], float] | None = None,
+        **kwargs: Any,
     ) -> None:
+        super().__init__(**kwargs)
         self._max_tokens = max_tokens
         self._min_priority = min_priority
         self._query = query

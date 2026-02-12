@@ -12,7 +12,7 @@ augmentation achieves 6% compression rate with minimal loss.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import List
+from typing import Any, List
 
 from contextkit.constants import DEFAULT_RAG_MAX_SENTENCES
 from contextkit.core import ContextBlock
@@ -50,7 +50,9 @@ class RAGCompressStep(PipelineStep):
         compressor: Callable[[str, str], str] | None = None,
         max_sentences: int = DEFAULT_RAG_MAX_SENTENCES,
         drop_threshold: float = 0.0,
+        **kwargs: Any,
     ) -> None:
+        super().__init__(**kwargs)
         self._compressor = compressor
         self._max_sentences = max_sentences
         self._drop_threshold = drop_threshold

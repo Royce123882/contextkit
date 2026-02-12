@@ -14,7 +14,7 @@ Reorders blocks for optimal attention patterns. Supports two strategies:
 
 from __future__ import annotations
 
-from typing import List, Set, Tuple
+from typing import Any, List, Set, Tuple
 
 from contextkit.core import ContextBlock
 from contextkit.core.block import BlockType
@@ -41,7 +41,8 @@ class ReorderStep(PipelineStep):
 
     _VALID_STRATEGIES = {"important_edges", "prefix_stable"}
 
-    def __init__(self, strategy: str = "important_edges") -> None:
+    def __init__(self, strategy: str = "important_edges", **kwargs: Any) -> None:
+        super().__init__(**kwargs)
         if strategy not in self._VALID_STRATEGIES:
             raise ValueError(
                 f"Unknown strategy {strategy!r}. "

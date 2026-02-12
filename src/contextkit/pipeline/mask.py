@@ -11,7 +11,7 @@ in both cost savings and task-solving ability.
 
 from __future__ import annotations
 
-from typing import List
+from typing import Any, List
 
 from contextkit.utils.token_counting import count as count_tokens
 from contextkit.core import ContextBlock
@@ -43,7 +43,9 @@ class MaskStep(PipelineStep):
         placeholder: str = _DEFAULT_PLACEHOLDER,
         block_types: List[str] | None = None,
         min_tokens: int = 20,
+        **kwargs: Any,
     ) -> None:
+        super().__init__(**kwargs)
         self._window = window
         self._placeholder = placeholder
         self._block_types = set(block_types) if block_types else None

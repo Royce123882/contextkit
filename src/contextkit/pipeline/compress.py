@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections import Counter
 from collections.abc import Callable
-from typing import List
+from typing import Any, List
 
 from contextkit.constants import (
     DEFAULT_COMPACT_MIN_TOKENS,
@@ -66,7 +66,9 @@ class CompressStep(PipelineStep):
         compression_ratio: float = DEFAULT_COMPRESSION_RATIO,
         scorer: Callable[[List[str]], List[float]] | None = None,
         min_tokens: int = DEFAULT_COMPACT_MIN_TOKENS,
+        **kwargs: Any,
     ) -> None:
+        super().__init__(**kwargs)
         self._compression_ratio = compression_ratio
         self._scorer = scorer or _idf_scorer
         self._min_tokens = min_tokens

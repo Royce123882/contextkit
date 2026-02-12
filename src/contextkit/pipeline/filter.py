@@ -6,7 +6,7 @@ Removes blocks below a relevance or quality threshold.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import List
+from typing import Any, List
 
 from contextkit.core import ContextBlock
 from contextkit.observe.provenance import Mutation
@@ -28,7 +28,9 @@ class FilterStep(PipelineStep):
         self,
         min_relevance: float = 0.0,
         filter_fn: Callable[[ContextBlock], bool] | None = None,
+        **kwargs: Any,
     ) -> None:
+        super().__init__(**kwargs)
         self._min_relevance = min_relevance
         self._filter_fn = filter_fn
 

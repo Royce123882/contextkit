@@ -5,7 +5,7 @@ Removes blocks with overlapping content using word-overlap similarity.
 
 from __future__ import annotations
 
-from typing import List
+from typing import Any, List
 
 from contextkit.constants import DEFAULT_SIMILARITY_THRESHOLD
 from contextkit.core import ContextBlock
@@ -26,8 +26,11 @@ class DeduplicateStep(PipelineStep):
     """
 
     def __init__(
-        self, similarity_threshold: float = DEFAULT_SIMILARITY_THRESHOLD
+        self,
+        similarity_threshold: float = DEFAULT_SIMILARITY_THRESHOLD,
+        **kwargs: Any,
     ) -> None:
+        super().__init__(**kwargs)
         self._threshold = similarity_threshold
 
     @property
