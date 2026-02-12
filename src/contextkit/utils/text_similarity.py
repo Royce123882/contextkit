@@ -101,11 +101,11 @@ def extract_key_sentences(
         return text
 
     scored = [
-        (idx, word_overlap_score(query, sentence), sentence)
-        for idx, sentence in enumerate(sentences)
+        (sentence_index, word_overlap_score(query, sentence), sentence)
+        for sentence_index, sentence in enumerate(sentences)
     ]
-    scored.sort(key=lambda x: x[1], reverse=True)
-    selected = sorted(scored[:max_sentences], key=lambda x: x[0])
+    scored.sort(key=lambda entry: entry[1], reverse=True)
+    selected = sorted(scored[:max_sentences], key=lambda entry: entry[0])
     return " ".join(sentence for _, _, sentence in selected)
 
 
@@ -147,7 +147,7 @@ def memory_relevance_score(
 def _split_sentences(text: str) -> list[str]:
     """Split text into sentences on period/question/exclamation boundaries."""
     sentences = re.split(r"(?<=[.!?])\s+", text.strip())
-    return [s for s in sentences if s.strip()]
+    return [sentence for sentence in sentences if sentence.strip()]
 
 
 def _tokenize_to_word_set(text: str) -> Set[str]:

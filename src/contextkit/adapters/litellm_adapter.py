@@ -49,7 +49,7 @@ class LiteLLMAdapter:
         messages: List[Dict[str, Any]] = []
 
         sorted_blocks = sorted(
-            window.blocks, key=lambda b: b.priority, reverse=True
+            window.blocks, key=lambda block: block.priority, reverse=True
         )
 
         for block in sorted_blocks:
@@ -58,8 +58,8 @@ class LiteLLMAdapter:
                 messages.append({"role": role, "content": block.content})
             elif isinstance(block.content, list):
                 if block.type == BlockType.SYSTEM_PROMPT:
-                    for msg in block.content:
-                        content = msg.get("content", "")
+                    for message in block.content:
+                        content = message.get("content", "")
                         if content:
                             messages.append({"role": "system", "content": content})
                 else:

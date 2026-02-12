@@ -38,7 +38,7 @@ class TrimStep(PipelineStep):
         query: Optional query string for relevance-aware pruning.
         relevance_weight: Balance between relevance and priority
             (0.0 = priority only, 1.0 = relevance only).
-        score_fn: Custom scoring function ``(query, content) -> float``.
+        scoring_function: Custom scoring function ``(query, content) -> float``.
             Defaults to :func:`word_overlap_score`.
     """
 
@@ -48,7 +48,7 @@ class TrimStep(PipelineStep):
         min_priority: int = 0,
         query: str | None = None,
         relevance_weight: float = DEFAULT_RELEVANCE_WEIGHT,
-        score_fn: Callable[[str, str], float] | None = None,
+        scoring_function: Callable[[str, str], float] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -56,7 +56,7 @@ class TrimStep(PipelineStep):
         self._min_priority = min_priority
         self._query = query
         self._relevance_weight = relevance_weight
-        self._score_fn = score_fn or word_overlap_score
+        self._scoring_function = scoring_function or word_overlap_score
 
     @property
     def name(self) -> str:
@@ -111,7 +111,7 @@ class TrimStep(PipelineStep):
             return normalized_priority
 
         content = block.content if isinstance(block.content, str) else ""
-        relevance = self._score_fn(self._query, content)
+        relevance = self._scoring_function(self._query, content)
 
         return (
             (1.0 - self._relevance_weight) * normalized_priority
@@ -126,7 +126,7 @@ class TrimStep(PipelineStep):
         """Remove lowest-scoring blocks until total fits the budget."""
         assert self._max_tokens is not None
 
-        total = sum(b.token_count for b in blocks)
+        total = sum(block.token_count for block in blocks)
         if total <= self._max_tokens:
             return blocks
 

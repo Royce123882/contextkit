@@ -271,8 +271,8 @@ class CompactStep(PipelineStep):
     def _build_numbered_content(self, paragraphs: List[str]) -> str:
         """Build numbered sections from paragraphs."""
         sections = []
-        for idx, para in enumerate(paragraphs, 1):
-            sections.append(f"## [{idx}]\n{para}")
+        for section_number, paragraph in enumerate(paragraphs, 1):
+            sections.append(f"## [{section_number}]\n{paragraph}")
         return "\n\n".join(sections)
 
     def _build_markdown(self, block: ContextBlock, numbered_content: str) -> str:

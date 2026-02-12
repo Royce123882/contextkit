@@ -41,7 +41,7 @@ class DriftDetector:
         drift_threshold: float = _DEFAULT_DRIFT_THRESHOLD,
     ) -> None:
         self._scorer = quality_scorer or QualityScorer()
-        self._threshold = drift_threshold
+        self._drift_threshold = drift_threshold
         self._score_history: List[float] = []
 
     @property
@@ -69,7 +69,7 @@ class DriftDetector:
         self._score_history.append(current_score)
 
         drift = self._compute_drift()
-        is_drifting = drift > self._threshold
+        is_drifting = drift > self._drift_threshold
 
         suggestion = ""
         if is_drifting:

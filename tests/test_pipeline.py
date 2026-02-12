@@ -170,7 +170,7 @@ class TestFilterStep:
 
     def test_custom_filter_function(self) -> None:
         step = FilterStep(
-            filter_fn=lambda b: b.priority > 30,
+            filter_function=lambda b: b.priority > 30,
         )
         blocks = [
             _make_block("low", priority=10),
@@ -700,7 +700,7 @@ class TestQueryAwareTrimStep:
         assert any("blended_score" in m.detail for m in removed_mutations)
 
     def test_uses_custom_scoring_function(self) -> None:
-        """A user-supplied score_fn replaces the default word-overlap scorer."""
+        """A user-supplied scoring_function replaces the default word-overlap scorer."""
         invocation_count = []
 
         def magic_word_scorer(query: str, content: str) -> float:
@@ -710,7 +710,7 @@ class TestQueryAwareTrimStep:
         trim_step = TrimStep(
             max_tokens=6,
             query="find magic",
-            score_fn=magic_word_scorer,
+            scoring_function=magic_word_scorer,
         )
         blocks = [
             _make_block("has_magic", content="magic word content here", priority=10),

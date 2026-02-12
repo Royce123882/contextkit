@@ -21,7 +21,7 @@ class TestRetrieverLazyImports:
 
             QdrantRetriever(
                 collection_name="test",
-                embed_fn=lambda q: [0.1],
+                embedding_function=lambda q: [0.1],
                 url="http://localhost:6333",
             )
 
@@ -31,7 +31,7 @@ class TestRetrieverLazyImports:
 
             PgvectorRetriever(
                 dsn="postgresql://test@localhost/test",
-                embed_fn=lambda q: [0.1],
+                embedding_function=lambda q: [0.1],
             )
 
     def test_pinecone_retriever_import_error(self) -> None:
@@ -40,7 +40,7 @@ class TestRetrieverLazyImports:
 
             PineconeRetriever(
                 index_name="test",
-                embed_fn=lambda q: [0.1],
+                embedding_function=lambda q: [0.1],
                 api_key="test-key",
             )
 

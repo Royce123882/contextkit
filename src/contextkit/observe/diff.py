@@ -27,8 +27,8 @@ def diff_windows(
     Returns:
         A formatted diff showing added, removed, and changed blocks.
     """
-    blocks_a = {b.display_name: b for b in window_a.blocks}
-    blocks_b = {b.display_name: b for b in window_b.blocks}
+    blocks_a = {block.display_name: block for block in window_a.blocks}
+    blocks_b = {block.display_name: block for block in window_b.blocks}
 
     names_a = set(blocks_a.keys())
     names_b = set(blocks_b.keys())

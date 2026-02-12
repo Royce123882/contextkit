@@ -21,18 +21,18 @@ class FilterStep(PipelineStep):
 
     Args:
         min_relevance: Minimum relevance score (from Origin).
-        filter_fn: Optional custom filter function.
+        filter_function: Optional custom filter function.
     """
 
     def __init__(
         self,
         min_relevance: float = 0.0,
-        filter_fn: Callable[[ContextBlock], bool] | None = None,
+        filter_function: Callable[[ContextBlock], bool] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self._min_relevance = min_relevance
-        self._filter_fn = filter_fn
+        self._filter_function = filter_function
 
     @property
     def name(self) -> str:
@@ -53,7 +53,7 @@ class FilterStep(PipelineStep):
 
     def _should_keep(self, block: ContextBlock) -> bool:
         """Determine whether a block passes the filter criteria."""
-        if self._filter_fn is not None and not self._filter_fn(block):
+        if self._filter_function is not None and not self._filter_function(block):
             return False
 
         if (

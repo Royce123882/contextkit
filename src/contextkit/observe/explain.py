@@ -50,7 +50,7 @@ def explain_block(window: ContextWindow, block_name: str) -> str:
 def _explain_included(window: ContextWindow, block: ContextBlock) -> str:
     """Explain an included block."""
     lines: List[str] = []
-    budget_pct = (
+    budget_percent = (
         f"{block.token_count / window.max_tokens * 100:.1f}%"
         if window.max_tokens > 0
         else "N/A"
@@ -90,7 +90,10 @@ def _explain_included(window: ContextWindow, block: ContextBlock) -> str:
     else:
         lines.append("- No mutations applied")
 
-    lines.append(f"- Budget impact: {budget_pct} of {window.max_tokens:,} token window")
+    lines.append(
+        f"- Budget impact: {budget_percent} of "
+        f"{window.max_tokens:,} token window"
+    )
 
     return "\n".join(lines)
 

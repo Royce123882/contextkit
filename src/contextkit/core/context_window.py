@@ -109,7 +109,9 @@ class ContextWindow:
     def token_count(self) -> int:
         """Total tokens across all blocks (cached)."""
         if self._cached_token_count is None:
-            self._cached_token_count = sum(b.token_count for b in self._blocks)
+            self._cached_token_count = sum(
+                block.token_count for block in self._blocks
+            )
         return self._cached_token_count
 
     @property
@@ -200,7 +202,7 @@ class ContextWindow:
         Returns:
             A list of message dicts ready for further formatting.
         """
-        sorted_blocks = sorted(self._blocks, key=lambda b: b.priority, reverse=True)
+        sorted_blocks = sorted(self._blocks, key=lambda block: block.priority, reverse=True)
 
         messages: List[Dict[str, Any]] = []
         for block in sorted_blocks:
@@ -233,7 +235,7 @@ class ContextWindow:
             "token_count": self.token_count,
             "budget_remaining": self.budget_remaining,
             "cost_estimate": self.cost_estimate,
-            "blocks": [self._serialize_block(b) for b in self._blocks],
+            "blocks": [self._serialize_block(block) for block in self._blocks],
             "assembly_report": (
                 self._assembly_report.model_dump(mode="json")
                 if self._assembly_report
@@ -347,7 +349,7 @@ class ContextWindow:
         Returns:
             List of matching ContextBlocks (may be empty).
         """
-        return [b for b in self._blocks if b.type == block_type]
+        return [block for block in self._blocks if block.type == block_type]
 
     def find_blocks(self, predicate: Callable[[ContextBlock], bool]) -> List[ContextBlock]:
         """Return all blocks matching a predicate function.
@@ -358,7 +360,7 @@ class ContextWindow:
         Returns:
             List of matching ContextBlocks.
         """
-        return [b for b in self._blocks if predicate(b)]
+        return [block for block in self._blocks if predicate(block)]
 
     def clone(self) -> "ContextWindow":
         """Create a deep copy of this window with the same configuration and blocks.

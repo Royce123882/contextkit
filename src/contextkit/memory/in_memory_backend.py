@@ -75,12 +75,12 @@ class InMemoryBackend:
                 continue
             results.append(record)
 
-        def relevance_score(rec: MemoryRecord) -> float:
+        def relevance_score(record: MemoryRecord) -> float:
             return memory_relevance_score(
                 query=query,
-                content=rec.content,
-                importance=rec.importance,
-                decay=rec.decay_factor(),
+                content=record.content,
+                importance=record.importance,
+                decay=record.decay_factor(),
                 word_match_weight=WORD_MATCH_WEIGHT,
                 importance_weight=IMPORTANCE_WEIGHT,
                 decay_weight=DECAY_WEIGHT,

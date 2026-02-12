@@ -40,7 +40,7 @@ class QdrantRetriever:
 
     Args:
         collection_name: Qdrant collection to search.
-        embed_fn: A callable that maps a query string to a
+        embedding_function: A callable that maps a query string to a
             list of floats (embedding vector).
         url: Qdrant server URL.  Mutually exclusive with *location*.
         api_key: API key for Qdrant Cloud.
@@ -53,7 +53,7 @@ class QdrantRetriever:
     def __init__(
         self,
         collection_name: str,
-        embed_fn: Callable[[str], List[float]],
+        embedding_function: Callable[[str], List[float]],
         *,
         url: str | None = None,
         api_key: str | None = None,
@@ -66,7 +66,7 @@ class QdrantRetriever:
         client_cls = qdrant.AsyncQdrantClient
 
         self._collection = collection_name
-        self._embed_fn = embed_fn
+        self._embedding_function = embedding_function
         self._content_field = content_field
         self._source_field = source_field
         self._score_threshold = score_threshold
@@ -92,7 +92,7 @@ class QdrantRetriever:
         Returns:
             Chunks ranked by vector similarity.
         """
-        vector = self._embed_fn(query)
+        vector = self._embedding_function(query)
         results = await self._client.search(
             collection_name=self._collection,
             query_vector=vector,

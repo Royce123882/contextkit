@@ -43,15 +43,15 @@ class AnthropicAdapter:
         system_parts: List[str] = []
         messages: List[Dict[str, Any]] = []
 
-        sorted_blocks = sorted(window.blocks, key=lambda b: b.priority, reverse=True)
+        sorted_blocks = sorted(window.blocks, key=lambda block: block.priority, reverse=True)
 
         for block in sorted_blocks:
             if block.type == BlockType.SYSTEM_PROMPT:
                 if isinstance(block.content, str):
                     system_parts.append(block.content)
                 elif isinstance(block.content, list):
-                    for msg in block.content:
-                        content = msg.get("content", "")
+                    for message in block.content:
+                        content = message.get("content", "")
                         if content:
                             system_parts.append(content)
             else:

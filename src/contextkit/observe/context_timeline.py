@@ -61,7 +61,7 @@ class ContextTimeline:
         added = sorted(current_names - prev_names)
         removed = sorted(prev_names - current_names)
 
-        budget_pct = (
+        budget_percent = (
             (token_count / self._max_tokens * 100) if self._max_tokens > 0 else 0.0
         )
 
@@ -73,7 +73,7 @@ class ContextTimeline:
             block_names=sorted(block_names),
             blocks_added=added,
             blocks_removed=removed,
-            budget_percent=budget_pct,
+            budget_percent=budget_percent,
             events=events or [],
         )
         self._snapshots.append(snapshot)
@@ -100,22 +100,22 @@ class ContextTimeline:
             A formatted string showing how context evolved.
         """
         lines: List[str] = []
-        for snap in self._snapshots:
+        for snapshot in self._snapshots:
             parts: List[str] = [
-                f"Turn {snap.turn:>3}:",
-                f"{snap.token_count:>8,} tokens",
-                f"({snap.budget_percent:.1f}%)",
+                f"Turn {snapshot.turn:>3}:",
+                f"{snapshot.token_count:>8,} tokens",
+                f"({snapshot.budget_percent:.1f}%)",
             ]
 
             changes: List[str] = []
-            if snap.blocks_added:
-                for name in snap.blocks_added:
+            if snapshot.blocks_added:
+                for name in snapshot.blocks_added:
                     changes.append(f"+{name}")
-            if snap.blocks_removed:
-                for name in snap.blocks_removed:
+            if snapshot.blocks_removed:
+                for name in snapshot.blocks_removed:
                     changes.append(f"-{name}")
-            if snap.events:
-                for event in snap.events:
+            if snapshot.events:
+                for event in snapshot.events:
                     changes.append(event)
 
             if changes:
@@ -134,7 +134,10 @@ class ContextTimeline:
         data = {
             "total_turns": self._current_turn,
             "max_tokens": self._max_tokens,
-            "snapshots": [s.model_dump(mode="json") for s in self._snapshots],
+            "snapshots": [
+                snapshot.model_dump(mode="json")
+                for snapshot in self._snapshots
+            ],
         }
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, default=str)

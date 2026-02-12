@@ -44,7 +44,7 @@ class OllamaAdapter:
         messages: List[Dict[str, str]] = []
 
         sorted_blocks = sorted(
-            window.blocks, key=lambda b: b.priority, reverse=True
+            window.blocks, key=lambda block: block.priority, reverse=True
         )
 
         for block in sorted_blocks:
@@ -53,15 +53,15 @@ class OllamaAdapter:
                 messages.append({"role": role, "content": block.content})
             elif isinstance(block.content, list):
                 if block.type == BlockType.SYSTEM_PROMPT:
-                    for msg in block.content:
-                        content = msg.get("content", "")
+                    for message in block.content:
+                        content = message.get("content", "")
                         if content:
                             messages.append({"role": "system", "content": content})
                 else:
-                    for msg in block.content:
+                    for message in block.content:
                         messages.append({
-                            "role": msg.get("role", "user"),
-                            "content": msg.get("content", ""),
+                            "role": message.get("role", "user"),
+                            "content": message.get("content", ""),
                         })
 
         logger.info(

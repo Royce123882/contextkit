@@ -77,7 +77,7 @@ def _build_summary_rows(window: ContextWindow, has_model: bool) -> List[List[str
     """Build data rows for the summary table."""
     rows: List[List[str]] = []
     for block in window.blocks:
-        budget_pct = (
+        budget_percent = (
             f"{block.token_count / window.max_tokens * 100:.1f}%"
             if window.max_tokens > 0
             else "N/A"
@@ -95,7 +95,7 @@ def _build_summary_rows(window: ContextWindow, has_model: bool) -> List[List[str
             cost = block.token_count * window.input_cost_per_mtok / 1_000_000
             row.append(f"${cost:.4f}")
 
-        row.extend([budget_pct, origin_str])
+        row.extend([budget_percent, origin_str])
         rows.append(row)
 
     return rows
@@ -112,12 +112,12 @@ def _build_summary_footer(window: ContextWindow, has_model: bool) -> List[str]:
     if has_model:
         footer_row.append(f"${window.cost_estimate:.4f}")
 
-    budget_pct_total = (
+    budget_percent_total = (
         f"{window.token_count / window.max_tokens * 100:.1f}%"
         if window.max_tokens > 0
         else "N/A"
     )
-    footer_row.extend([budget_pct_total, ""])
+    footer_row.extend([budget_percent_total, ""])
     return footer_row
 
 
@@ -203,14 +203,14 @@ def _inspect_messages_table(messages: List[Dict[str, Any]]) -> List[str]:
     """Build a table of conversation messages for SHORT_TERM_MEMORY."""
     headers = ["#", "Role", "Tokens", "Content"]
     rows = []
-    for i, msg in enumerate(messages, 1):
-        content = msg.get("content", "")
-        msg_tokens = count_tokens(content) if isinstance(content, str) else 0
+    for i, message in enumerate(messages, 1):
+        content = message.get("content", "")
+        message_tokens = count_tokens(content) if isinstance(content, str) else 0
         rows.append(
             [
                 str(i),
-                msg.get("role", "unknown"),
-                str(msg_tokens),
+                message.get("role", "unknown"),
+                str(message_tokens),
                 _preview(content),
             ]
         )
@@ -244,12 +244,15 @@ def _inspect_tools_table(tools: List[Dict[str, Any]]) -> List[str]:
     rows = []
     for i, tool in enumerate(tools, 1):
         tool_name = tool.get("name", "-")
-        desc = tool.get("description", "-")
+        description = tool.get("description", "-")
         params = tool.get("parameters", {})
         param_count = (
             len(params.get("properties", {})) if isinstance(params, dict) else 0
         )
-        rows.append([str(i), tool_name, truncate_content(desc), str(param_count)])
+        rows.append([
+            str(i), tool_name,
+            truncate_content(description), str(param_count),
+        ])
     return ["", "Tools:", format_text_table(headers, rows)]
 
 

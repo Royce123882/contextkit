@@ -31,7 +31,7 @@ class DeduplicateStep(PipelineStep):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self._threshold = similarity_threshold
+        self._similarity_threshold = similarity_threshold
 
     @property
     def name(self) -> str:
@@ -40,7 +40,7 @@ class DeduplicateStep(PipelineStep):
 
     def process(self, blocks: List[ContextBlock]) -> List[ContextBlock]:
         """Remove duplicate blocks based on content similarity."""
-        sorted_blocks = sorted(blocks, key=lambda b: b.priority, reverse=True)
+        sorted_blocks = sorted(blocks, key=lambda block: block.priority, reverse=True)
         result: List[ContextBlock] = []
 
         for block in sorted_blocks:
@@ -67,7 +67,7 @@ class DeduplicateStep(PipelineStep):
             if not isinstance(existing.content, str):
                 continue
             similarity = word_overlap_similarity(block.content, existing.content)
-            if similarity >= self._threshold:
+            if similarity >= self._similarity_threshold:
                 return existing
 
         return None

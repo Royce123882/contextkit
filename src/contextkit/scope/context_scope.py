@@ -75,7 +75,7 @@ class ContextScope:
             events: Any events that occurred during this turn.
         """
         if self._timeline is not None:
-            block_names = [b.display_name for b in self._window.blocks]
+            block_names = [block.display_name for block in self._window.blocks]
             self._timeline.record(
                 token_count=self._window.token_count,
                 block_names=block_names,
@@ -131,7 +131,10 @@ class ContextScope:
             A HandoffPackage ready for the target agent.
         """
         if block_names is not None:
-            blocks = [b for b in self._window.blocks if b.display_name in block_names]
+            blocks = [
+                block for block in self._window.blocks
+                if block.display_name in block_names
+            ]
         else:
             blocks = list(self._window.blocks)
 

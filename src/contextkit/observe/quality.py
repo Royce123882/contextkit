@@ -100,13 +100,13 @@ class QualityScorer:
             List of PositionScore entries.
         """
         scores: List[PositionScore] = []
-        for idx, block in enumerate(blocks):
-            attention = _u_curve_weight(idx, total)
+        for position, block in enumerate(blocks):
+            attention = _u_curve_weight(position, total)
             risk = self._assess_risk(block.priority, attention)
             scores.append(
                 PositionScore(
                     block_name=block.display_name,
-                    position=idx,
+                    position=position,
                     total_blocks=total,
                     attention_weight=round(attention, 3),
                     priority=block.priority,
@@ -172,11 +172,11 @@ class QualityScorer:
             Ratio between 0.0 and 1.0 (1.0 = all signal, no noise).
         """
         signal_tokens = sum(
-            b.token_count
-            for b in blocks
-            if b.priority >= self._priority_threshold
+            block.token_count
+            for block in blocks
+            if block.priority >= self._priority_threshold
         )
-        total_tokens = sum(b.token_count for b in blocks)
+        total_tokens = sum(block.token_count for block in blocks)
         if total_tokens == 0:
             return 1.0
         return signal_tokens / total_tokens
@@ -213,7 +213,7 @@ class QualityScorer:
                 seen_contents.append(block.content)
 
         string_block_count = sum(
-            1 for b in blocks if isinstance(b.content, str)
+            1 for block in blocks if isinstance(block.content, str)
         )
         return redundant_count / max(string_block_count, 1)
 

@@ -167,15 +167,15 @@ class ContextPipeline:
         Returns:
             The same ContextWindow (modified in place).
         """
-        step_names = ", ".join(s.name for s in self._steps)
+        step_names = ", ".join(step.name for step in self._steps)
         logger.info("Running pipeline (%d steps: %s)", len(self._steps), step_names)
 
         blocks = list(window.blocks)
-        total_tokens_before = sum(b.token_count for b in blocks)
+        total_tokens_before = sum(block.token_count for block in blocks)
 
         step_reports = self._execute_all_steps(blocks, window)
 
-        total_tokens_after = sum(b.token_count for b in blocks)
+        total_tokens_after = sum(block.token_count for block in blocks)
         self._last_report = self._build_report(
             step_reports, total_tokens_before, total_tokens_after, window
         )
@@ -205,13 +205,13 @@ class ContextPipeline:
         Returns:
             The same ContextWindow (modified in place).
         """
-        step_names = ", ".join(s.name for s in self._steps)
+        step_names = ", ".join(step.name for step in self._steps)
         logger.info(
             "Running async pipeline (%d steps: %s)", len(self._steps), step_names
         )
 
         blocks = list(window.blocks)
-        total_tokens_before = sum(b.token_count for b in blocks)
+        total_tokens_before = sum(block.token_count for block in blocks)
 
         step_reports: List[StepReport] = []
         for step in self._steps:
@@ -222,7 +222,7 @@ class ContextPipeline:
             step_reports.append(report)
 
         window.replace_blocks(blocks)
-        total_tokens_after = sum(b.token_count for b in blocks)
+        total_tokens_after = sum(block.token_count for block in blocks)
 
         self._last_report = self._build_report(
             step_reports, total_tokens_before, total_tokens_after, window
@@ -265,7 +265,7 @@ class ContextPipeline:
         blocks: List[ContextBlock],
     ) -> Tuple[StepReport, List[ContextBlock]]:
         """Execute a single pipeline step synchronously and return its report."""
-        tokens_before = sum(b.token_count for b in blocks)
+        tokens_before = sum(block.token_count for block in blocks)
         blocks_before_count = len(blocks)
 
         logger.debug("Running step '%s' on %d blocks", step.name, blocks_before_count)
@@ -292,7 +292,7 @@ class ContextPipeline:
         Returns:
             Tuple of (step report, processed blocks).
         """
-        tokens_before = sum(b.token_count for b in blocks)
+        tokens_before = sum(block.token_count for block in blocks)
         blocks_before_count = len(blocks)
 
         logger.debug(
@@ -325,7 +325,7 @@ class ContextPipeline:
         Returns:
             A StepReport summarizing what changed.
         """
-        tokens_after = sum(b.token_count for b in processed_blocks)
+        tokens_after = sum(block.token_count for block in processed_blocks)
         blocks_after_count = len(processed_blocks)
 
         if tokens_before != tokens_after:

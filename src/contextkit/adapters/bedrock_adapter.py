@@ -49,7 +49,7 @@ class BedrockAdapter:
         messages: List[Dict[str, Any]] = []
 
         sorted_blocks = sorted(
-            window.blocks, key=lambda b: b.priority, reverse=True
+            window.blocks, key=lambda block: block.priority, reverse=True
         )
 
         for block in sorted_blocks:
@@ -66,13 +66,13 @@ class BedrockAdapter:
                         "content": [{"text": content_text}],
                     })
                 elif isinstance(block.content, list):
-                    for msg in block.content:
-                        msg_content = msg.get("content", "")
-                        msg_role = msg.get("role", role)
-                        if msg_content:
+                    for message in block.content:
+                        message_content = message.get("content", "")
+                        message_role = message.get("role", role)
+                        if message_content:
                             messages.append({
-                                "role": msg_role,
-                                "content": [{"text": msg_content}],
+                                "role": message_role,
+                                "content": [{"text": message_content}],
                             })
 
         logger.info(
@@ -118,10 +118,10 @@ class BedrockAdapter:
             A dict ready for bedrock_client.converse().
         """
         bedrock_messages: List[Dict[str, Any]] = []
-        for msg in messages:
+        for message in messages:
             bedrock_messages.append({
-                "role": msg.get("role", "user"),
-                "content": [{"text": msg.get("content", "")}],
+                "role": message.get("role", "user"),
+                "content": [{"text": message.get("content", "")}],
             })
 
         payload: Dict[str, Any] = {"messages": bedrock_messages}

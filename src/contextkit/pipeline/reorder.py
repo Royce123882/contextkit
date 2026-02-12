@@ -74,7 +74,7 @@ class ReorderStep(PipelineStep):
         """Place highest priority at start/end, lowest in middle."""
         sorted_by_priority = sorted(
             enumerate(blocks),
-            key=lambda x: x[1].priority,
+            key=lambda pair: pair[1].priority,
             reverse=True,
         )
 
@@ -105,7 +105,7 @@ class ReorderStep(PipelineStep):
                     )
                 )
 
-        return [b for b in result if b is not None]
+        return [block for block in result if block is not None]
 
     # ------------------------------------------------------------------
     # Strategy: prefix_stable
@@ -117,29 +117,38 @@ class ReorderStep(PipelineStep):
         """Group stable block types first, then reorder the dynamic tail."""
         indexed = list(enumerate(blocks))
 
-        stable = [(i, b) for i, b in indexed if b.type in _STABLE_BLOCK_TYPES]
-        dynamic = [(i, b) for i, b in indexed if b.type not in _STABLE_BLOCK_TYPES]
+        stable = [
+            (orig_pos, block) for orig_pos, block in indexed
+            if block.type in _STABLE_BLOCK_TYPES
+        ]
+        dynamic = [
+            (orig_pos, block) for orig_pos, block in indexed
+            if block.type not in _STABLE_BLOCK_TYPES
+        ]
 
         # Stable section: sort by priority descending (system prompt first)
-        stable.sort(key=lambda x: x[1].priority, reverse=True)
+        stable.sort(key=lambda pair: pair[1].priority, reverse=True)
 
         # Dynamic section: apply important-edges within the sub-list
-        dynamic_blocks = [b for _, b in dynamic]
+        dynamic_blocks = [block for _, block in dynamic]
         if len(dynamic_blocks) > 2:
             dynamic_blocks = self._reorder_edges(dynamic_blocks)
 
         # Map each dynamic block back to its original index
-        dynamic_orig_idx = {id(b): i for i, b in dynamic}
+        dynamic_orig_idx = {
+            id(block): orig_pos for orig_pos, block in dynamic
+        }
 
         # Build ordered list with original indices preserved
         ordered_pairs: List[Tuple[int, ContextBlock]] = [
-            (orig_idx, b) for orig_idx, b in stable
+            (orig_pos, block) for orig_pos, block in stable
         ]
         ordered_pairs += [
-            (dynamic_orig_idx.get(id(b), -1), b) for b in dynamic_blocks
+            (dynamic_orig_idx.get(id(block), -1), block)
+            for block in dynamic_blocks
         ]
 
-        ordered = [b for _, b in ordered_pairs]
+        ordered = [block for _, block in ordered_pairs]
 
         # Record mutations for blocks whose position changed
         for new_pos, (orig_idx, block) in enumerate(ordered_pairs):

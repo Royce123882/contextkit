@@ -45,7 +45,7 @@ class ContextAssembler:
             len(blocks),
             f"{self._window.max_tokens:,}",
         )
-        sorted_blocks = sorted(blocks, key=lambda b: b.priority, reverse=True)
+        sorted_blocks = sorted(blocks, key=lambda block: block.priority, reverse=True)
         included, excluded = self._partition_blocks(sorted_blocks)
 
         report = self._build_report(included, excluded)

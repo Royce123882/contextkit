@@ -36,7 +36,7 @@ class PineconeRetriever:
 
     Args:
         index_name: Name of the Pinecone index.
-        embed_fn: Callable that maps a query string to a vector.
+        embedding_function: Callable that maps a query string to a vector.
         api_key: Pinecone API key.
         namespace: Optional Pinecone namespace for scoping.
         content_field: Metadata key that stores chunk text.
@@ -46,7 +46,7 @@ class PineconeRetriever:
     def __init__(
         self,
         index_name: str,
-        embed_fn: Callable[[str], List[float]],
+        embedding_function: Callable[[str], List[float]],
         *,
         api_key: str,
         namespace: str = "",
@@ -55,7 +55,7 @@ class PineconeRetriever:
     ) -> None:
         pinecone_mod = _import_pinecone()
 
-        self._embed_fn = embed_fn
+        self._embedding_function = embedding_function
         self._namespace = namespace
         self._content_field = content_field
         self._source_field = source_field
@@ -77,7 +77,7 @@ class PineconeRetriever:
         Returns:
             Chunks ranked by similarity score.
         """
-        vector = self._embed_fn(query)
+        vector = self._embedding_function(query)
         results = self._index.query(
             vector=vector,
             top_k=top_k,

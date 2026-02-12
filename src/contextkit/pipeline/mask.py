@@ -63,17 +63,17 @@ class MaskStep(PipelineStep):
 
         # Identify maskable blocks (those matching type filter)
         maskable_indices: List[int] = []
-        for idx, block in enumerate(blocks):
+        for block_index, block in enumerate(blocks):
             if self._block_types and block.type.value not in self._block_types:
                 continue
-            maskable_indices.append(idx)
+            maskable_indices.append(block_index)
 
         # Keep the last `window` maskable blocks; mask the rest
         to_keep = set(maskable_indices[-self._window :])
         result: List[ContextBlock] = []
 
-        for idx, block in enumerate(blocks):
-            if idx in to_keep or idx not in maskable_indices:
+        for block_index, block in enumerate(blocks):
+            if block_index in to_keep or block_index not in maskable_indices:
                 result.append(block)
                 continue
 

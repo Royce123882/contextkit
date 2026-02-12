@@ -223,7 +223,7 @@ def main() -> None:
     filter_pipeline = ContextPipeline(
         steps=[
             FilterStep(
-                filter_fn=lambda block: block.priority >= 50,
+                filter_function=lambda block: block.priority >= 50,
             ),
         ]
     )
@@ -231,7 +231,7 @@ def main() -> None:
     filter_report = filter_pipeline.last_report
 
     print(f"Blocks removed: {filter_report.steps[0].blocks_removed}")
-    print(f"Remaining: {[b.name for b in filter_window.blocks]}")
+    print(f"Remaining: {[block.name for block in filter_window.blocks]}")
 
 
 if __name__ == "__main__":

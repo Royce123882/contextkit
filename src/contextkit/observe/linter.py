@@ -98,7 +98,7 @@ class ContextLinter:
             A list with one warning if missing, empty otherwise.
         """
         has_system = any(
-            b.type == BlockType.SYSTEM_PROMPT for b in window.blocks
+            block.type == BlockType.SYSTEM_PROMPT for block in window.blocks
         )
         if not has_system:
             return [
@@ -139,13 +139,13 @@ class ContextLinter:
         middle_blocks = blocks[middle_start:middle_end]
 
         high_priority_in_middle = [
-            b for b in middle_blocks
-            if b.priority >= self._high_priority_threshold
+            block for block in middle_blocks
+            if block.priority >= self._high_priority_threshold
         ]
         if not high_priority_in_middle:
             return []
 
-        block_names = [b.display_name for b in high_priority_in_middle]
+        block_names = [block.display_name for block in high_priority_in_middle]
         return [
             LintWarning(
                 code="lost_in_middle",

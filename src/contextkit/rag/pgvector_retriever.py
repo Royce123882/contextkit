@@ -42,7 +42,7 @@ class PgvectorRetriever:
     Args:
         dsn: PostgreSQL connection string
             (e.g. ``"postgresql://user:pass@localhost/db"``).
-        embed_fn: Callable that maps a query string to a vector.
+        embedding_function: Callable that maps a query string to a vector.
         table: Table name storing documents and embeddings.
         content_column: Column that stores the chunk text.
         source_column: Column that stores the source identifier.
@@ -54,7 +54,7 @@ class PgvectorRetriever:
     def __init__(
         self,
         dsn: str,
-        embed_fn: Callable[[str], List[float]],
+        embedding_function: Callable[[str], List[float]],
         *,
         table: str = "documents",
         content_column: str = "content",
@@ -67,7 +67,7 @@ class PgvectorRetriever:
         _import_asyncpg()  # Fail fast if asyncpg is not installed
 
         self._dsn = dsn
-        self._embed_fn = embed_fn
+        self._embedding_function = embedding_function
         self._table = table
         self._content_col = content_column
         self._source_col = source_column
@@ -101,7 +101,7 @@ class PgvectorRetriever:
         Returns:
             Chunks ranked by cosine similarity.
         """
-        vector = self._embed_fn(query)
+        vector = self._embedding_function(query)
         vector_str = "[" + ",".join(str(v) for v in vector) + "]"
 
         pool = await self._get_pool()

@@ -41,7 +41,7 @@ class OpenAIAdapter:
         """
         messages: List[Dict[str, Any]] = []
 
-        sorted_blocks = sorted(window.blocks, key=lambda b: b.priority, reverse=True)
+        sorted_blocks = sorted(window.blocks, key=lambda block: block.priority, reverse=True)
 
         for block in sorted_blocks:
             if isinstance(block.content, str):
@@ -49,11 +49,11 @@ class OpenAIAdapter:
                 messages.append({"role": role, "content": block.content})
             elif isinstance(block.content, list):
                 if block.type == BlockType.SYSTEM_PROMPT:
-                    for msg in block.content:
+                    for message in block.content:
                         messages.append(
                             {
                                 "role": "system",
-                                "content": msg.get("content", ""),
+                                "content": message.get("content", ""),
                             }
                         )
                 else:

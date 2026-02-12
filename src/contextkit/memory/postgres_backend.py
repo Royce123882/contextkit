@@ -115,7 +115,7 @@ class PostgresBackend:
 
         pool = await asyncpg.create_pool(dsn)
 
-        rag = PgvectorRetriever(dsn=dsn, embed_fn=embed)
+        rag = PgvectorRetriever(dsn=dsn, embedding_function=embed)
         memory = PostgresBackend(pool=pool)  # shares the same Postgres
 
     Args:
@@ -247,12 +247,12 @@ class PostgresBackend:
         records = [self._row_to_record(row) for row in rows]
 
         # Score and rank
-        def relevance_score(rec: MemoryRecord) -> float:
+        def relevance_score(record: MemoryRecord) -> float:
             return memory_relevance_score(
                 query=query,
-                content=rec.content,
-                importance=rec.importance,
-                decay=rec.decay_factor(),
+                content=record.content,
+                importance=record.importance,
+                decay=record.decay_factor(),
                 word_match_weight=WORD_MATCH_WEIGHT,
                 importance_weight=IMPORTANCE_WEIGHT,
                 decay_weight=DECAY_WEIGHT,

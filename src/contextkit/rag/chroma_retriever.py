@@ -101,11 +101,11 @@ class ChromaRetriever:
         metadatas = (results.get("metadatas") or [[]])[0]
         distances = (results.get("distances") or [[]])[0]
 
-        for doc, meta, dist in zip(documents, metadatas, distances, strict=False):
+        for doc, meta, distance in zip(documents, metadatas, distances, strict=False):
             meta = meta or {}
             source = str(meta.pop(self._source_field, ""))
             # Chroma returns L2 distances; convert to a 0-1 score
-            score = 1.0 / (1.0 + dist)
+            score = 1.0 / (1.0 + distance)
             metadata: Dict[str, Any] = dict(meta)
             chunks.append(
                 Chunk(
