@@ -47,13 +47,30 @@ class ContextBlock(BaseModel):
         mutations: History of changes made by pipeline steps.
     """
 
-    type: BlockType
-    content: str | List[Dict[str, Any]]
-    priority: int = PRIORITY_DEFAULT
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    name: str | None = None
-    origin: Origin | None = None
-    mutations: List[Mutation] = Field(default_factory=list)
+    type: BlockType = Field(description="The kind of context this block represents.")
+    content: str | List[Dict[str, Any]] = Field(
+        description="The actual content -- a string for prompts, or a list of message dicts for conversation history."
+    )
+    priority: int = Field(
+        default=PRIORITY_DEFAULT,
+        description="Higher values mean more important to keep (default 50).",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Arbitrary key-value pairs for custom data.",
+    )
+    name: str | None = Field(
+        default=None,
+        description="Optional human-readable label for inspection/explain.",
+    )
+    origin: Origin | None = Field(
+        default=None,
+        description="Where this block came from (auto-populated by SDK managers).",
+    )
+    mutations: List[Mutation] = Field(
+        default_factory=list,
+        description="History of changes made by pipeline steps.",
+    )
 
     model_config = {"arbitrary_types_allowed": True}
 

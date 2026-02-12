@@ -19,10 +19,10 @@ class Chunk(BaseModel):
         metadata: Additional metadata (page number, section, etc.).
     """
 
-    content: str
-    source: str = ""
-    relevance_score: float = 0.0
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    content: str = Field(description="The text content of the chunk.")
+    source: str = Field(default="", description="Source identifier (e.g. file path, URL, doc ID).")
+    relevance_score: float = Field(default=0.0, description="Relevance to the query (0.0-1.0).")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata (page number, section, etc.).")
 
 
 @runtime_checkable

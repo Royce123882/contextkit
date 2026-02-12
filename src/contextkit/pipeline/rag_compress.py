@@ -20,6 +20,7 @@ from contextkit.core.block import BlockType
 from contextkit.observe.provenance import Mutation
 from contextkit.pipeline.base import PipelineStep
 from contextkit.utils.text_similarity import extract_key_sentences
+from contextkit.utils.token_counting import count as count_tokens
 
 
 class RAGCompressStep(PipelineStep):
@@ -122,8 +123,6 @@ class RAGCompressStep(PipelineStep):
 
         if compressed_content == block.content:
             return block
-
-        from contextkit.utils.token_counting import count as count_tokens
 
         tokens_after = count_tokens(compressed_content)
 

@@ -22,10 +22,10 @@ class ToolDefinition(BaseModel):
         tags: Categorization tags for selection.
     """
 
-    name: str
-    description: str
-    parameters: Dict[str, Any] = Field(default_factory=dict)
-    tags: List[str] = Field(default_factory=list)
+    name: str = Field(description="Tool name (unique identifier).")
+    description: str = Field(description="Human-readable description.")
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="JSON Schema for the tool's parameters.")
+    tags: List[str] = Field(default_factory=list, description="Categorization tags for selection.")
 
 
 class ToolOutput(BaseModel):
@@ -39,11 +39,11 @@ class ToolOutput(BaseModel):
         called_at: When the tool was called.
     """
 
-    tool_name: str
-    call_id: str = ""
-    result: str = ""
-    latency_ms: float = 0.0
-    called_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    tool_name: str = Field(description="Name of the tool that was called.")
+    call_id: str = Field(default="", description="Unique identifier for this call.")
+    result: str = Field(default="", description="The tool's output content.")
+    latency_ms: float = Field(default=0.0, description="How long the tool call took in milliseconds.")
+    called_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When the tool was called.")
 
     def to_block(self, priority: int = PRIORITY_TOOL_OUTPUT) -> ContextBlock:
         """Convert this output to a ContextBlock.

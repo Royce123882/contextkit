@@ -10,6 +10,7 @@ compression with minimal performance loss.
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Callable
 from typing import List
 
@@ -37,8 +38,6 @@ def _idf_scorer(tokens: List[str]) -> List[float]:
     """
     if not tokens:
         return []
-
-    from collections import Counter
 
     counts = Counter(tokens)
     total = len(tokens)

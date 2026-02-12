@@ -18,11 +18,11 @@ class Example(BaseModel):
         metadata: Additional metadata.
     """
 
-    example_id: str
-    input_text: str
-    output_text: str
-    tags: List[str] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    example_id: str = Field(description="Unique identifier.")
+    input_text: str = Field(description="The example input.")
+    output_text: str = Field(description="The expected output.")
+    tags: List[str] = Field(default_factory=list, description="Categorization tags.")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata.")
 
     @property
     def formatted(self) -> str:

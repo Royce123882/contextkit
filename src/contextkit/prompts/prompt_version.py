@@ -18,8 +18,8 @@ class PromptVersion(BaseModel):
         description: Optional description of this version.
     """
 
-    name: str
-    version: str
-    template: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    description: str = ""
+    name: str = Field(description="Template name.")
+    version: str = Field(description="Version string (e.g. '1.0', '2.1').")
+    template: str = Field(description="The template string with {{variable}} placeholders.")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When this version was created.")
+    description: str = Field(default="", description="Optional description of this version.")

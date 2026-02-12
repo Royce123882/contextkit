@@ -9,10 +9,12 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, Dict, List
 
+from contextkit.core.block import BlockType
 from contextkit.observe.renderers import (
     format_text_table,
     truncate_content,
 )
+from contextkit.utils.token_counting import count as count_tokens
 
 if TYPE_CHECKING:
     from contextkit.core import ContextBlock, ContextWindow
@@ -178,8 +180,6 @@ def _build_mutation_lines(block: ContextBlock) -> List[str]:
 
 def _build_type_specific_details(block: ContextBlock) -> List[str]:
     """Build type-specific drill-down details for a block."""
-    from contextkit.core import BlockType
-
     if block.type == BlockType.SHORT_TERM_MEMORY and isinstance(block.content, list):
         return _inspect_messages_table(block.content)
 
@@ -201,13 +201,11 @@ def _build_type_specific_details(block: ContextBlock) -> List[str]:
 
 def _inspect_messages_table(messages: List[Dict[str, Any]]) -> List[str]:
     """Build a table of conversation messages for SHORT_TERM_MEMORY."""
-    from contextkit.utils.token_counting import count
-
     headers = ["#", "Role", "Tokens", "Content"]
     rows = []
     for i, msg in enumerate(messages, 1):
         content = msg.get("content", "")
-        msg_tokens = count(content) if isinstance(content, str) else 0
+        msg_tokens = count_tokens(content) if isinstance(content, str) else 0
         rows.append(
             [
                 str(i),
@@ -221,13 +219,11 @@ def _inspect_messages_table(messages: List[Dict[str, Any]]) -> List[str]:
 
 def _inspect_chunks_table(chunks: List[Dict[str, Any]]) -> List[str]:
     """Build a table of RAG chunks for RAG blocks."""
-    from contextkit.utils.token_counting import count
-
     headers = ["#", "Source", "Tokens", "Relevance", "Content"]
     rows = []
     for i, chunk in enumerate(chunks, 1):
         content = chunk.get("content", "")
-        chunk_tokens = count(content) if isinstance(content, str) else 0
+        chunk_tokens = count_tokens(content) if isinstance(content, str) else 0
         source = chunk.get("source", "-")
         relevance = chunk.get("relevance", "-")
         rows.append(

@@ -39,14 +39,14 @@ class MemoryRecord(BaseModel):
         last_accessed: Timestamp of the most recent retrieval.
     """
 
-    key: str
-    content: str
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    tags: List[str] = Field(default_factory=list)
-    stored_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    importance: float = DEFAULT_IMPORTANCE
-    access_count: int = 0
-    last_accessed: datetime | None = None
+    key: str = Field(description="Unique identifier for this record.")
+    content: str = Field(description="The stored content string.")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Arbitrary key-value pairs (timestamps, tags, etc.).")
+    tags: List[str] = Field(default_factory=list, description="Categorization tags for filtering.")
+    stored_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When this record was stored.")
+    importance: float = Field(default=DEFAULT_IMPORTANCE, description="Importance score for retrieval ranking (0.0-1.0).")
+    access_count: int = Field(default=0, description="Number of times this record has been retrieved.")
+    last_accessed: datetime | None = Field(default=None, description="Timestamp of the most recent retrieval.")
 
     def decay_factor(
         self,

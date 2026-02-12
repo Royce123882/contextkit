@@ -27,13 +27,13 @@ class StepReport(BaseModel):
         details: Additional step-specific details.
     """
 
-    step_name: str
-    blocks_modified: int = 0
-    blocks_removed: int = 0
-    tokens_before: int = 0
-    tokens_after: int = 0
-    tokens_saved: int = 0
-    details: Dict[str, Any] = Field(default_factory=dict)
+    step_name: str = Field(description="Name of the step.")
+    blocks_modified: int = Field(default=0, description="Number of blocks modified.")
+    blocks_removed: int = Field(default=0, description="Number of blocks removed.")
+    tokens_before: int = Field(default=0, description="Total tokens before the step.")
+    tokens_after: int = Field(default=0, description="Total tokens after the step.")
+    tokens_saved: int = Field(default=0, description="Tokens saved by this step.")
+    details: Dict[str, Any] = Field(default_factory=dict, description="Additional step-specific details.")
 
 
 class PipelineReport(BaseModel):
@@ -47,11 +47,11 @@ class PipelineReport(BaseModel):
         cost_delta: Estimated cost savings.
     """
 
-    steps: List[StepReport] = Field(default_factory=list)
-    total_tokens_before: int = 0
-    total_tokens_after: int = 0
-    total_tokens_saved: int = 0
-    cost_delta: float = 0.0
+    steps: List[StepReport] = Field(default_factory=list, description="Reports from each step.")
+    total_tokens_before: int = Field(default=0, description="Total tokens before pipeline.")
+    total_tokens_after: int = Field(default=0, description="Total tokens after pipeline.")
+    total_tokens_saved: int = Field(default=0, description="Total tokens saved.")
+    cost_delta: float = Field(default=0.0, description="Estimated cost savings.")
 
 
 class PipelineStep(ABC):

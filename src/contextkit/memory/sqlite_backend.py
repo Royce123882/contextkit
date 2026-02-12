@@ -27,7 +27,7 @@ from contextkit.constants import (
     WORD_MATCH_WEIGHT,
 )
 from contextkit.memory.record import MemoryRecord
-from contextkit.utils.text_similarity import word_overlap_score
+from contextkit.utils.text_similarity import memory_relevance_score
 
 # SQL statements used by the backend.
 _CREATE_TABLE_SQL = """
@@ -207,12 +207,14 @@ class SQLiteBackend:
 
         # Score and rank by relevance with decay
         def relevance_score(record: MemoryRecord) -> float:
-            word_match = word_overlap_score(query, record.content)
-            decay = record.decay_factor()
-            return (
-                word_match * WORD_MATCH_WEIGHT
-                + record.importance * IMPORTANCE_WEIGHT
-                + decay * DECAY_WEIGHT
+            return memory_relevance_score(
+                query=query,
+                content=record.content,
+                importance=record.importance,
+                decay=record.decay_factor(),
+                word_match_weight=WORD_MATCH_WEIGHT,
+                importance_weight=IMPORTANCE_WEIGHT,
+                decay_weight=DECAY_WEIGHT,
             )
 
         records.sort(key=relevance_score, reverse=True)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class PositionScore(BaseModel):
@@ -25,12 +25,16 @@ class PositionScore(BaseModel):
             One of ``"low"``, ``"medium"``, or ``"high"``.
     """
 
-    block_name: str
-    position: int
-    total_blocks: int
-    attention_weight: float
-    priority: int
-    risk: str
+    block_name: str = Field(description="Display name of the scored block.")
+    position: int = Field(description="Zero-based position in the block sequence.")
+    total_blocks: int = Field(description="Total number of blocks in the window.")
+    attention_weight: float = Field(
+        description="Estimated attention weight at this position (1.0 = high, 0.0 = low)."
+    )
+    priority: int = Field(description="The block's priority value.")
+    risk: str = Field(
+        description="Risk level for information loss ('low', 'medium', or 'high')."
+    )
 
 
 class QualityReport(BaseModel):
@@ -44,6 +48,12 @@ class QualityReport(BaseModel):
             of being missed by the model.
     """
 
-    overall_score: float
-    positional_scores: List[PositionScore]
-    warnings: List[str]
+    overall_score: float = Field(
+        description="Weighted quality score (0.0-1.0) where 1.0 means all important blocks are well-placed."
+    )
+    positional_scores: List[PositionScore] = Field(
+        description="Per-block position analysis."
+    )
+    warnings: List[str] = Field(
+        description="Human-readable warnings for blocks at risk of being missed."
+    )

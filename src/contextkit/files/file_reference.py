@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class FileReference(BaseModel):
@@ -15,7 +15,7 @@ class FileReference(BaseModel):
         name: File name without path.
     """
 
-    path: str
-    size_bytes: int = 0
-    extension: str = ""
-    name: str = ""
+    path: str = Field(description="Absolute or relative file path.")
+    size_bytes: int = Field(default=0, description="File size in bytes.")
+    extension: str = Field(default="", description="File extension (e.g. '.py', '.md').")
+    name: str = Field(default="", description="File name without path.")

@@ -24,9 +24,9 @@ class Origin(BaseModel):
     names, queries, retriever names, relevance scores, file paths, etc.
     """
 
-    source: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    details: Dict[str, Any] = Field(default_factory=dict)
+    source: str = Field(description="Subsystem that produced the block (e.g. 'prompt', 'rag', 'memory', 'file', 'tool').")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When this origin was created.")
+    details: Dict[str, Any] = Field(default_factory=dict, description="Source-specific metadata such as template names, queries, retriever names, etc.")
 
     # Convenience properties for common detail fields
     @property
@@ -91,13 +91,23 @@ class Mutation(BaseModel):
     Created when a pipeline step trims, compacts, deduplicates,
     reorders, or otherwise modifies a block. The full history is
     preserved so every change is traceable.
+
+    Attributes:
+        step: Name of the pipeline step that made the modification.
+        action: Type of action performed (e.g. 'removed', 'compressed', 'moved').
+        detail: Human-readable description of the change.
+        tokens_before: Token count before the modification.
+        tokens_after: Token count after the modification.
+        before_content: Original content before modification (optional).
+        after_content: Content after modification (optional).
+        timestamp: When the mutation occurred.
     """
 
-    step: str
-    action: str
-    detail: str
-    tokens_before: int
-    tokens_after: int
-    before_content: str | None = None
-    after_content: str | None = None
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    step: str = Field(description="Name of the pipeline step that made the modification.")
+    action: str = Field(description="Type of action performed (e.g. 'removed', 'compressed', 'moved').")
+    detail: str = Field(description="Human-readable description of the change.")
+    tokens_before: int = Field(description="Token count before the modification.")
+    tokens_after: int = Field(description="Token count after the modification.")
+    before_content: str | None = Field(default=None, description="Original content before modification.")
+    after_content: str | None = Field(default=None, description="Content after modification.")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="When the mutation occurred.")

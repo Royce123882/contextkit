@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Dict, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ModelSpec(BaseModel):
@@ -22,10 +22,10 @@ class ModelSpec(BaseModel):
         output_cost_per_mtok: Cost per million output tokens in USD.
     """
 
-    max_context: int
-    encoding: str
-    input_cost_per_mtok: float
-    output_cost_per_mtok: float
+    max_context: int = Field(description="Maximum context window size in tokens.")
+    encoding: str = Field(description="The tiktoken encoding name for this model.")
+    input_cost_per_mtok: float = Field(description="Cost per million input tokens in USD.")
+    output_cost_per_mtok: float = Field(description="Cost per million output tokens in USD.")
 
 
 class UnknownModelError(Exception):

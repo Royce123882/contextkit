@@ -6,12 +6,12 @@ import logging
 from typing import Any, Dict, List
 
 from contextkit.core import BudgetExceededError, ContextWindow
-
-logger = logging.getLogger("contextkit")
 from contextkit.observe.context_timeline import ContextTimeline
 from contextkit.scope.handoff_package import HandoffPackage
 from contextkit.scope.scratchpad import Scratchpad
 from contextkit.scope.shared_memory import SharedMemory
+
+logger = logging.getLogger("contextkit")
 
 
 class ContextScope:

@@ -27,7 +27,7 @@ from contextkit.constants import (
     WORD_MATCH_WEIGHT,
 )
 from contextkit.memory.record import MemoryRecord
-from contextkit.utils.text_similarity import word_overlap_score
+from contextkit.utils.text_similarity import memory_relevance_score
 
 _CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS memory_records (
@@ -229,12 +229,14 @@ class PostgresBackend:
 
         # Score and rank
         def relevance_score(rec: MemoryRecord) -> float:
-            word_match = word_overlap_score(query, rec.content)
-            decay = rec.decay_factor()
-            return (
-                word_match * WORD_MATCH_WEIGHT
-                + rec.importance * IMPORTANCE_WEIGHT
-                + decay * DECAY_WEIGHT
+            return memory_relevance_score(
+                query=query,
+                content=rec.content,
+                importance=rec.importance,
+                decay=rec.decay_factor(),
+                word_match_weight=WORD_MATCH_WEIGHT,
+                importance_weight=IMPORTANCE_WEIGHT,
+                decay_weight=DECAY_WEIGHT,
             )
 
         records.sort(key=relevance_score, reverse=True)

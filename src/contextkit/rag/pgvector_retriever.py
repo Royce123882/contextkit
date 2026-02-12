@@ -7,6 +7,7 @@ Requires the ``pgvector`` optional dependency group::
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Callable, Dict, List
 
@@ -92,8 +93,6 @@ class PgvectorRetriever:
         Returns:
             Chunks ranked by cosine similarity.
         """
-        import json
-
         vector = self._embed_fn(query)
         vector_str = "[" + ",".join(str(v) for v in vector) + "]"
 

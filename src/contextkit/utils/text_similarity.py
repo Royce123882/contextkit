@@ -109,6 +109,41 @@ def extract_key_sentences(
     return " ".join(sentence for _, _, sentence in selected)
 
 
+def memory_relevance_score(
+    query: str,
+    content: str,
+    importance: float,
+    decay: float,
+    word_match_weight: float,
+    importance_weight: float,
+    decay_weight: float,
+) -> float:
+    """Compute a blended relevance score for memory retrieval.
+
+    Combines word-overlap matching, record importance, and temporal
+    decay into a single score.  Used by all memory backends to ensure
+    consistent ranking behaviour.
+
+    Args:
+        query: The search query string.
+        content: The record content to score against.
+        importance: Record importance (0.0-1.0).
+        decay: Temporal decay factor (0.0-1.0).
+        word_match_weight: Weight for the word-overlap component.
+        importance_weight: Weight for the importance component.
+        decay_weight: Weight for the decay component.
+
+    Returns:
+        A composite relevance score.
+    """
+    word_match = word_overlap_score(query, content)
+    return (
+        word_match * word_match_weight
+        + importance * importance_weight
+        + decay * decay_weight
+    )
+
+
 def _split_sentences(text: str) -> list[str]:
     """Split text into sentences on period/question/exclamation boundaries."""
     sentences = re.split(r"(?<=[.!?])\s+", text.strip())
