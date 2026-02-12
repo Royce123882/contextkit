@@ -8,12 +8,28 @@ Requires the ``qdrant`` optional dependency group::
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable, Dict, List
+from typing import TYPE_CHECKING, Any, Callable, Dict, List
 
 from contextkit.constants import DEFAULT_TOP_K
 from contextkit.rag.chunk import Chunk
 
+if TYPE_CHECKING:
+    from qdrant_client import AsyncQdrantClient
+
 logger = logging.getLogger("contextkit")
+
+
+def _import_qdrant_client() -> Any:
+    """Import qdrant_client at runtime, raising a clear error if missing."""
+    try:
+        import qdrant_client as _qdrant_client  # noqa: WPS433
+
+        return _qdrant_client
+    except ImportError as exc:
+        raise ImportError(
+            "qdrant-client is required for QdrantRetriever. "
+            "Install it with: pip install contextkit[qdrant]"
+        ) from exc
 
 
 class QdrantRetriever:
@@ -46,13 +62,8 @@ class QdrantRetriever:
         source_field: str = "source",
         score_threshold: float = 0.0,
     ) -> None:
-        try:
-            from qdrant_client import AsyncQdrantClient
-        except ImportError as exc:
-            raise ImportError(
-                "qdrant-client is required for QdrantRetriever. "
-                "Install it with: pip install contextkit[qdrant]"
-            ) from exc
+        qdrant = _import_qdrant_client()
+        AsyncQdrantClient = qdrant.AsyncQdrantClient
 
         self._collection = collection_name
         self._embed_fn = embed_fn
@@ -61,7 +72,7 @@ class QdrantRetriever:
         self._score_threshold = score_threshold
 
         if url is not None:
-            self._client = AsyncQdrantClient(url=url, api_key=api_key)
+            self._client: AsyncQdrantClient = AsyncQdrantClient(url=url, api_key=api_key)
         elif location is not None:
             self._client = AsyncQdrantClient(location=location)
         else:

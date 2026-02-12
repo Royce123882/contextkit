@@ -9,12 +9,28 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Callable, Dict, List
+from typing import TYPE_CHECKING, Any, Callable, Dict, List
 
 from contextkit.constants import DEFAULT_TOP_K
 from contextkit.rag.chunk import Chunk
 
+if TYPE_CHECKING:
+    import asyncpg
+
 logger = logging.getLogger("contextkit")
+
+
+def _import_asyncpg() -> Any:
+    """Import asyncpg at runtime, raising a clear error if missing."""
+    try:
+        import asyncpg as _asyncpg  # noqa: WPS433
+
+        return _asyncpg
+    except ImportError as exc:
+        raise ImportError(
+            "asyncpg is required for PgvectorRetriever. "
+            "Install it with: pip install contextkit[pgvector]"
+        ) from exc
 
 
 class PgvectorRetriever:
@@ -48,13 +64,7 @@ class PgvectorRetriever:
         pool_min: int = 2,
         pool_max: int = 10,
     ) -> None:
-        try:
-            import asyncpg  # noqa: F401
-        except ImportError as exc:
-            raise ImportError(
-                "asyncpg is required for PgvectorRetriever. "
-                "Install it with: pip install contextkit[pgvector]"
-            ) from exc
+        _import_asyncpg()  # Fail fast if asyncpg is not installed
 
         self._dsn = dsn
         self._embed_fn = embed_fn
@@ -67,12 +77,10 @@ class PgvectorRetriever:
         self._pool_max = pool_max
         self._pool: Any = None
 
-    async def _get_pool(self) -> Any:
+    async def _get_pool(self) -> asyncpg.Pool:
         """Lazily create the asyncpg connection pool."""
         if self._pool is None:
-            import asyncpg
-
-            self._pool = await asyncpg.create_pool(
+            self._pool = await _import_asyncpg().create_pool(
                 self._dsn,
                 min_size=self._pool_min,
                 max_size=self._pool_max,

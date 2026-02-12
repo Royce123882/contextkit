@@ -10,7 +10,10 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
+
+if TYPE_CHECKING:
+    import tiktoken
 
 from contextkit.utils.cache import token_count_cache
 from contextkit.constants import (

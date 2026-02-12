@@ -16,6 +16,19 @@ from contextkit.rag.chunk import Chunk
 logger = logging.getLogger("contextkit")
 
 
+def _import_pinecone() -> Any:
+    """Import pinecone at runtime, raising a clear error if missing."""
+    try:
+        import pinecone as _pinecone  # noqa: WPS433
+
+        return _pinecone
+    except ImportError as exc:
+        raise ImportError(
+            "pinecone is required for PineconeRetriever. "
+            "Install it with: pip install contextkit[pinecone]"
+        ) from exc
+
+
 class PineconeRetriever:
     """Retriever backed by the Pinecone managed vector database.
 
@@ -40,20 +53,14 @@ class PineconeRetriever:
         content_field: str = "content",
         source_field: str = "source",
     ) -> None:
-        try:
-            from pinecone import Pinecone
-        except ImportError as exc:
-            raise ImportError(
-                "pinecone is required for PineconeRetriever. "
-                "Install it with: pip install contextkit[pinecone]"
-            ) from exc
+        pinecone_mod = _import_pinecone()
 
         self._embed_fn = embed_fn
         self._namespace = namespace
         self._content_field = content_field
         self._source_field = source_field
 
-        pc = Pinecone(api_key=api_key)
+        pc = pinecone_mod.Pinecone(api_key=api_key)
         self._index = pc.Index(index_name)
 
     async def retrieve(

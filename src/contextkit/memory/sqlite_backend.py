@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from contextkit.constants import (
     DECAY_WEIGHT,
@@ -28,6 +28,9 @@ from contextkit.constants import (
 )
 from contextkit.memory.record import MemoryRecord
 from contextkit.utils.text_similarity import memory_relevance_score
+
+if TYPE_CHECKING:
+    import aiosqlite
 
 # SQL statements used by the backend.
 _CREATE_TABLE_SQL = """
@@ -76,6 +79,13 @@ _UPDATE_ACCESS_SQL = (
 )
 
 
+def _import_aiosqlite() -> Any:
+    """Import aiosqlite at runtime, raising a clear error if missing."""
+    import aiosqlite as _aiosqlite  # noqa: WPS433
+
+    return _aiosqlite
+
+
 class SQLiteBackend:
     """Persistent memory backend using SQLite via aiosqlite.
 
@@ -96,6 +106,10 @@ class SQLiteBackend:
         self._db_path = db_path
         self._initialized = False
 
+    def _connect(self) -> aiosqlite.Connection:
+        """Return an aiosqlite connection context manager for the database."""
+        return _import_aiosqlite().connect(self._db_path)
+
     async def _ensure_table(self) -> None:
         """Create the memory_records table if it doesn't exist.
 
@@ -105,9 +119,7 @@ class SQLiteBackend:
         if self._initialized:
             return
 
-        import aiosqlite
-
-        async with aiosqlite.connect(self._db_path) as db:
+        async with self._connect() as db:
             await db.execute(_CREATE_TABLE_SQL)
 
             # Migrate older databases that lack the decay columns
@@ -143,8 +155,6 @@ class SQLiteBackend:
         Returns:
             The stored MemoryRecord.
         """
-        import aiosqlite
-
         await self._ensure_table()
 
         stored_at = datetime.now(timezone.utc)
@@ -157,7 +167,7 @@ class SQLiteBackend:
             importance=importance,
         )
 
-        async with aiosqlite.connect(self._db_path) as db:
+        async with self._connect() as db:
             await db.execute(
                 _UPSERT_SQL,
                 (
@@ -195,8 +205,6 @@ class SQLiteBackend:
         Returns:
             List of matching MemoryRecords, ranked by relevance.
         """
-        import aiosqlite
-
         await self._ensure_table()
 
         records = await self._fetch_all_records()
@@ -222,7 +230,7 @@ class SQLiteBackend:
 
         # Update access metadata on retrieved records
         now = datetime.now(timezone.utc)
-        async with aiosqlite.connect(self._db_path) as db:
+        async with self._connect() as db:
             for record in top_results:
                 record.record_access()
                 await db.execute(
@@ -242,11 +250,9 @@ class SQLiteBackend:
         Returns:
             True if the record was found and deleted, False otherwise.
         """
-        import aiosqlite
-
         await self._ensure_table()
 
-        async with aiosqlite.connect(self._db_path) as db:
+        async with self._connect() as db:
             cursor = await db.execute(_DELETE_SQL, (key,))
             await db.commit()
             row_count: int = cursor.rowcount or 0
@@ -273,10 +279,8 @@ class SQLiteBackend:
 
     async def _fetch_all_records(self) -> List[MemoryRecord]:
         """Load all records from the database."""
-        import aiosqlite
-
         records: List[MemoryRecord] = []
-        async with aiosqlite.connect(self._db_path) as db:
+        async with self._connect() as db:
             async with db.execute(_SELECT_ALL_SQL) as cursor:
                 async for row in cursor:
                     record = _row_to_record(row)
@@ -286,11 +290,9 @@ class SQLiteBackend:
     @property
     async def record_count(self) -> int:
         """Count the number of records in the database."""
-        import aiosqlite
-
         await self._ensure_table()
 
-        async with aiosqlite.connect(self._db_path) as db:
+        async with self._connect() as db:
             async with db.execute(_COUNT_SQL) as cursor:
                 row = await cursor.fetchone()
                 return row[0] if row else 0

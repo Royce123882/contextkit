@@ -8,12 +8,28 @@ Requires the ``chroma`` optional dependency group::
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List
 
 from contextkit.constants import DEFAULT_TOP_K
 from contextkit.rag.chunk import Chunk
 
+if TYPE_CHECKING:
+    import chromadb
+
 logger = logging.getLogger("contextkit")
+
+
+def _import_chromadb() -> Any:
+    """Import chromadb at runtime, raising a clear error if missing."""
+    try:
+        import chromadb as _chromadb  # noqa: WPS433
+
+        return _chromadb
+    except ImportError as exc:
+        raise ImportError(
+            "chromadb is required for ChromaRetriever. "
+            "Install it with: pip install contextkit[chroma]"
+        ) from exc
 
 
 class ChromaRetriever:
@@ -39,13 +55,7 @@ class ChromaRetriever:
         *,
         source_field: str = "source",
     ) -> None:
-        try:
-            import chromadb  # noqa: F401
-        except ImportError as exc:
-            raise ImportError(
-                "chromadb is required for ChromaRetriever. "
-                "Install it with: pip install contextkit[chroma]"
-            ) from exc
+        _import_chromadb()  # Fail fast if chromadb is not installed
 
         self._collection_name = collection_name
         self._source_field = source_field
@@ -58,9 +68,7 @@ class ChromaRetriever:
             return self._collection
 
         if self._client is None:
-            import chromadb
-
-            self._client = await chromadb.AsyncClient()
+            self._client = await _import_chromadb().AsyncClient()
 
         self._collection = await self._client.get_or_create_collection(
             name=self._collection_name,
