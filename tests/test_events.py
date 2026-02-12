@@ -29,6 +29,7 @@ class TestContextEvent:
             "PIPELINE_STEP",
             "PIPELINE_COMPLETE",
             "WINDOW_RENDERED",
+            "CONTEXT_INSUFFICIENT",
         ]
         actual = [e.name for e in ContextEvent]
         assert sorted(actual) == sorted(expected)

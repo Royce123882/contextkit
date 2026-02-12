@@ -1,28 +1,42 @@
 """Reorder pipeline step.
 
-Reorders blocks for optimal attention patterns, placing
-high-priority content at the start and end of the sequence.
+Reorders blocks for optimal attention patterns. Supports two strategies:
+
+- ``"important_edges"``: Places high-priority blocks at the start and
+  end of the sequence where LLM attention is strongest (based on
+  "Lost in the Middle", Liu et al. 2023).
+- ``"prefix_stable"``: Groups stable block types (system prompt, tool
+  definitions, examples, schemas) first as a shared prefix, then
+  applies important-edges within the dynamic section.  This maximises
+  KV-cache / prefix-cache hits on providers that support it (Anthropic,
+  Google).
 """
 
 from __future__ import annotations
 
-from typing import List
+from typing import List, Set
 
 from contextkit.core import ContextBlock
+from contextkit.core.block import BlockType
 from contextkit.observe.provenance import Mutation
 from contextkit.pipeline.base import PipelineStep
+
+_STABLE_BLOCK_TYPES: Set[BlockType] = {
+    BlockType.SYSTEM_PROMPT,
+    BlockType.TOOL_DEFINITIONS,
+    BlockType.OUTPUT_SCHEMAS,
+    BlockType.EXAMPLES,
+}
+"""Block types whose content rarely changes between requests."""
 
 
 class ReorderStep(PipelineStep):
     """Reorder blocks for optimal attention patterns.
 
-    Places high-priority content at the start and end of the
-    sequence (important edges), with lower-priority content
-    in the middle.
-
     Args:
-        strategy: Reordering strategy. "important_edges" places
-            highest priority at start/end.
+        strategy: ``"important_edges"`` places highest priority at
+            start/end.  ``"prefix_stable"`` groups stable types first
+            then applies important-edges within the dynamic section.
     """
 
     def __init__(self, strategy: str = "important_edges") -> None:
@@ -40,7 +54,13 @@ class ReorderStep(PipelineStep):
 
         if self._strategy == "important_edges":
             return self._reorder_edges(blocks)
+        if self._strategy == "prefix_stable":
+            return self._reorder_prefix_stable(blocks)
         return blocks
+
+    # ------------------------------------------------------------------
+    # Strategy: important_edges
+    # ------------------------------------------------------------------
 
     def _reorder_edges(self, blocks: List[ContextBlock]) -> List[ContextBlock]:
         """Place highest priority at start/end, lowest in middle."""
@@ -78,3 +98,48 @@ class ReorderStep(PipelineStep):
                 )
 
         return [b for b in result if b is not None]
+
+    # ------------------------------------------------------------------
+    # Strategy: prefix_stable
+    # ------------------------------------------------------------------
+
+    def _reorder_prefix_stable(
+        self, blocks: List[ContextBlock]
+    ) -> List[ContextBlock]:
+        """Group stable block types first, then reorder the dynamic tail."""
+        indexed = list(enumerate(blocks))
+
+        stable = [(i, b) for i, b in indexed if b.type in _STABLE_BLOCK_TYPES]
+        dynamic = [(i, b) for i, b in indexed if b.type not in _STABLE_BLOCK_TYPES]
+
+        # Stable section: sort by priority descending (system prompt first)
+        stable.sort(key=lambda x: x[1].priority, reverse=True)
+
+        # Dynamic section: apply important-edges within the sub-list
+        dynamic_blocks = [b for _, b in dynamic]
+        if len(dynamic_blocks) > 2:
+            dynamic_blocks = self._reorder_edges(dynamic_blocks)
+
+        ordered = [b for _, b in stable] + dynamic_blocks
+
+        # Record mutations for blocks whose position changed
+        for new_pos, block in enumerate(ordered):
+            orig_idx = next(
+                i for i, b in indexed if b is block
+            )
+            if new_pos != orig_idx:
+                region = "prefix" if block.type in _STABLE_BLOCK_TYPES else "dynamic"
+                block.mutations.append(
+                    Mutation(
+                        step=self.name,
+                        action="moved",
+                        detail=(
+                            f"position {orig_idx} -> position {new_pos} "
+                            f"({region} region, {block.type.value})"
+                        ),
+                        tokens_before=block.token_count,
+                        tokens_after=block.token_count,
+                    )
+                )
+
+        return ordered

@@ -1,10 +1,16 @@
-"""In-memory storage backend for development and testing."""
+"""In-memory storage backend for development and testing.
+
+Incorporates temporal decay in retrieval scoring so that recently
+accessed records are ranked higher, modelling the Ebbinghaus
+forgetting curve with spaced-repetition reinforcement.
+"""
 
 from __future__ import annotations
 
 from typing import Any, Dict, List
 
 from contextkit.constants import (
+    DECAY_WEIGHT,
     DEFAULT_IMPORTANCE,
     DEFAULT_TOP_K,
     IMPORTANCE_WEIGHT,
@@ -18,8 +24,15 @@ class InMemoryBackend:
     """In-memory storage backend for development and testing.
 
     Records are stored in a dict keyed by record key. Retrieval
-    uses simple substring matching on content. Not suitable for
-    production use with large datasets.
+    ranks by a blend of word-overlap relevance, importance, and
+    temporal decay.  Retrieved records have their access metadata
+    updated (spaced repetition).
+
+    The scoring formula is::
+
+        score = word_match * WORD_MATCH_WEIGHT
+              + importance * IMPORTANCE_WEIGHT
+              + decay      * DECAY_WEIGHT
     """
 
     def __init__(self) -> None:
@@ -50,7 +63,11 @@ class InMemoryBackend:
         top_k: int = DEFAULT_TOP_K,
         tags: List[str] | None = None,
     ) -> List[MemoryRecord]:
-        """Retrieve records by keyword matching and importance."""
+        """Retrieve records by keyword matching, importance, and decay.
+
+        Retrieved records have their ``access_count`` and
+        ``last_accessed`` updated to reinforce future retention.
+        """
         results: List[MemoryRecord] = []
 
         for record in self._records.values():
@@ -59,11 +76,21 @@ class InMemoryBackend:
             results.append(record)
 
         def relevance_score(rec: MemoryRecord) -> float:
-            score = word_overlap_score(query, rec.content)
-            return score * WORD_MATCH_WEIGHT + rec.importance * IMPORTANCE_WEIGHT
+            word_match = word_overlap_score(query, rec.content)
+            decay = rec.decay_factor()
+            return (
+                word_match * WORD_MATCH_WEIGHT
+                + rec.importance * IMPORTANCE_WEIGHT
+                + decay * DECAY_WEIGHT
+            )
 
         results.sort(key=relevance_score, reverse=True)
-        return results[:top_k]
+        top_results = results[:top_k]
+
+        for record in top_results:
+            record.record_access()
+
+        return top_results
 
     async def delete(self, key: str) -> bool:
         """Delete a record by key."""

@@ -59,6 +59,63 @@ def word_overlap_score(query: str, target: str) -> float:
     return overlap / len(query_words)
 
 
+def information_density(text: str) -> float:
+    """Compute information density as the ratio of unique words to total words.
+
+    Higher density means more varied vocabulary (more informative).
+    Lower density means many repeated words (less informative).
+
+    Args:
+        text: The text to analyze.
+
+    Returns:
+        A density score between 0.0 and 1.0.
+    """
+    words = text.lower().split()
+    if not words:
+        return 0.0
+    return len(set(words)) / len(words)
+
+
+def extract_key_sentences(
+    text: str,
+    query: str,
+    max_sentences: int = 3,
+) -> str:
+    """Extract the most query-relevant sentences from text.
+
+    Scores each sentence by its word overlap with the query,
+    then returns the top-scoring sentences in original order.
+
+    Args:
+        text: Source text to extract from.
+        query: Query to score relevance against.
+        max_sentences: Maximum sentences to return.
+
+    Returns:
+        A string containing the selected sentences.
+    """
+    sentences = _split_sentences(text)
+    if len(sentences) <= max_sentences:
+        return text
+
+    scored = [
+        (idx, word_overlap_score(query, sentence), sentence)
+        for idx, sentence in enumerate(sentences)
+    ]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    selected = sorted(scored[:max_sentences], key=lambda x: x[0])
+    return " ".join(sentence for _, _, sentence in selected)
+
+
+def _split_sentences(text: str) -> list[str]:
+    """Split text into sentences on period/question/exclamation boundaries."""
+    import re
+
+    sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+    return [s for s in sentences if s.strip()]
+
+
 def _tokenize_to_word_set(text: str) -> Set[str]:
     """Split text into a set of unique lowercased words."""
     return set(text.lower().split())

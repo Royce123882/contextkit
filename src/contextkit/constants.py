@@ -99,3 +99,54 @@ DEFAULT_COMPACT_TARGET_RATIO: float = 0.5
 
 DEFAULT_COMPACT_MIN_TOKENS: int = 100
 """Minimum token count before a block qualifies for compaction."""
+
+# ---------------------------------------------------------------------------
+# Memory Decay
+# ---------------------------------------------------------------------------
+
+MEMORY_HALF_LIFE_HOURS: float = 168.0
+"""Default half-life for memory decay in hours (1 week)."""
+
+DECAY_WEIGHT: float = 0.3
+"""Weight applied to temporal decay factor during retrieval ranking."""
+
+# ---------------------------------------------------------------------------
+# Query-Aware Pruning
+# ---------------------------------------------------------------------------
+
+DEFAULT_RELEVANCE_WEIGHT: float = 0.5
+"""Default weight for relevance vs. priority in query-aware pruning."""
+
+# ---------------------------------------------------------------------------
+# Compression Defaults
+# ---------------------------------------------------------------------------
+
+DEFAULT_COMPRESSION_RATIO: float = 0.5
+"""Default compression ratio for the CompressStep (0.0-1.0)."""
+
+# ---------------------------------------------------------------------------
+# Context Quality Scoring
+# ---------------------------------------------------------------------------
+
+HIGH_PRIORITY_THRESHOLD: int = 70
+"""Blocks at or above this priority are considered 'high priority'."""
+
+LOW_ATTENTION_THRESHOLD: float = 0.5
+"""Attention weight below this value is considered a risky position."""
+
+# ---------------------------------------------------------------------------
+# Context Sufficiency
+# ---------------------------------------------------------------------------
+
+DEFAULT_MIN_QUERY_COVERAGE: float = 0.6
+"""Minimum fraction of query terms that must appear in context."""
+
+DEFAULT_MIN_AVG_RELEVANCE: float = 0.3
+"""Minimum average relevance score across RAG blocks."""
+
+# ---------------------------------------------------------------------------
+# RAG Compression
+# ---------------------------------------------------------------------------
+
+DEFAULT_RAG_MAX_SENTENCES: int = 3
+"""Default max sentences to keep per RAG block during compression."""

@@ -32,6 +32,7 @@ class ContextEvent(enum.Enum):
     PIPELINE_STEP = "pipeline_step"
     PIPELINE_COMPLETE = "pipeline_complete"
     WINDOW_RENDERED = "window_rendered"
+    CONTEXT_INSUFFICIENT = "context_insufficient"
 
 
 class EventData(BaseModel):
