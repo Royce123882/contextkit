@@ -12,6 +12,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Protocol, runtime_checkable
 
+from contextkit.constants import DEFAULT_COMPACTION_STORAGE_DIR
+
 
 @runtime_checkable
 class CompactionStore(Protocol):
@@ -80,7 +82,7 @@ class LocalCompactionStore:
         base_dir: Directory for storing compaction artifacts.
     """
 
-    def __init__(self, base_dir: str = ".contextkit/compacted") -> None:
+    def __init__(self, base_dir: str = DEFAULT_COMPACTION_STORAGE_DIR) -> None:
         self._base_dir = Path(base_dir)
 
     async def save(

@@ -8,6 +8,8 @@ Requires the ``s3`` optional dependency group::
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
@@ -69,6 +71,16 @@ class S3CompactionStore:
         mod = _import_aiobotocore()
         return mod.get_session()
 
+    @asynccontextmanager
+    async def _s3_client(self) -> AsyncIterator[Any]:
+        """Yield an S3 client from the session with region configuration."""
+        session = self._get_session()
+        client_kwargs: Dict[str, Any] = {}
+        if self._region:
+            client_kwargs["region_name"] = self._region
+        async with session.create_client("s3", **client_kwargs) as client:
+            yield client
+
     async def save(
         self,
         key: str,
@@ -85,12 +97,7 @@ class S3CompactionStore:
         Returns:
             The ``s3://`` URI of the stored object.
         """
-        session = self._get_session()
-        kwargs: Dict[str, Any] = {}
-        if self._region:
-            kwargs["region_name"] = self._region
-
-        async with session.create_client("s3", **kwargs) as client:
+        async with self._s3_client() as client:
             put_kwargs: Dict[str, Any] = {
                 "Bucket": self._bucket,
                 "Key": self._s3_key(key),
@@ -98,9 +105,7 @@ class S3CompactionStore:
                 "ContentType": "text/markdown; charset=utf-8",
             }
             if metadata:
-                put_kwargs["Metadata"] = {
-                    str(k): str(v) for k, v in metadata.items()
-                }
+                put_kwargs["Metadata"] = {str(k): str(v) for k, v in metadata.items()}
             await client.put_object(**put_kwargs)
 
         return f"s3://{self._bucket}/{self._s3_key(key)}"
@@ -114,12 +119,7 @@ class S3CompactionStore:
         Returns:
             Object contents as a string, or None if not found.
         """
-        session = self._get_session()
-        kwargs: Dict[str, Any] = {}
-        if self._region:
-            kwargs["region_name"] = self._region
-
-        async with session.create_client("s3", **kwargs) as client:
+        async with self._s3_client() as client:
             try:
                 response = await client.get_object(
                     Bucket=self._bucket,
@@ -139,12 +139,7 @@ class S3CompactionStore:
         Returns:
             True if deletion was attempted (S3 DeleteObject is idempotent).
         """
-        session = self._get_session()
-        kwargs: Dict[str, Any] = {}
-        if self._region:
-            kwargs["region_name"] = self._region
-
-        async with session.create_client("s3", **kwargs) as client:
+        async with self._s3_client() as client:
             await client.delete_object(
                 Bucket=self._bucket,
                 Key=self._s3_key(key),
@@ -157,13 +152,8 @@ class S3CompactionStore:
         Returns:
             A list of keys (object key stems without prefix and ``.md`` suffix).
         """
-        session = self._get_session()
-        kwargs: Dict[str, Any] = {}
-        if self._region:
-            kwargs["region_name"] = self._region
-
         keys: List[str] = []
-        async with session.create_client("s3", **kwargs) as client:
+        async with self._s3_client() as client:
             paginator = client.get_paginator("list_objects_v2")
             async for page in paginator.paginate(
                 Bucket=self._bucket,

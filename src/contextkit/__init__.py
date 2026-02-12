@@ -16,6 +16,7 @@ from contextkit.adapters import (
     OpenAIAdapter,
 )
 from contextkit.assembler import AssemblyReport, BlockDecision, ContextAssembler
+from contextkit.compaction import CompactionStore, LocalCompactionStore
 from contextkit.core import (
     BlockType,
     BudgetExceededError,
@@ -28,7 +29,6 @@ from contextkit.memory import LongTermMemory, ShortTermMemory
 from contextkit.models import ModelSpec, UnknownModelError
 from contextkit.observe import QualityScorer, SufficiencyChecker
 from contextkit.observe.provenance import Mutation, Origin
-from contextkit.compaction import CompactionStore, LocalCompactionStore
 from contextkit.pipeline import (
     CompactStep,
     ContextPipeline,
@@ -46,57 +46,45 @@ from contextkit.scope import ContextScope, HandoffPackage, Scratchpad, SharedMem
 from contextkit.tools import ToolRegistry
 
 __all__ = [
-    # Core
+    "AnthropicAdapter",
+    "AssemblyReport",
+    "BedrockAdapter",
+    "BlockDecision",
     "BlockType",
     "BudgetExceededError",
-    "ContextBlock",
-    "ContextWindow",
-    # Assembler
-    "AssemblyReport",
-    "BlockDecision",
+    "CompactStep",
+    "CompactionStore",
     "ContextAssembler",
-    # Adapters
-    "AnthropicAdapter",
-    "BedrockAdapter",
+    "ContextBlock",
+    "ContextPipeline",
+    "ContextScope",
+    "ContextWindow",
+    "DeduplicateStep",
+    "FileContext",
+    "FilterStep",
+    "HandoffPackage",
     "LiteLLMAdapter",
+    "LocalCompactionStore",
+    "LongTermMemory",
+    "MaskStep",
+    "ModelSpec",
+    "Mutation",
     "OllamaAdapter",
     "OpenAIAdapter",
-    # Compaction
-    "CompactionStore",
-    "LocalCompactionStore",
-    # Pipeline
-    "CompactStep",
-    "ContextPipeline",
-    "DeduplicateStep",
-    "FilterStep",
-    "MaskStep",
+    "Origin",
     "PipelineStep",
-    "RAGCompressStep",
-    "ReorderStep",
-    "TrimStep",
-    # Memory
-    "LongTermMemory",
-    "ShortTermMemory",
-    # Managers
-    "FileContext",
     "PromptManager",
+    "QualityScorer",
+    "RAGCompressStep",
     "RAGContext",
-    "ToolRegistry",
-    # Multi-agent
-    "ContextScope",
-    "HandoffPackage",
+    "ReorderStep",
     "Scratchpad",
     "SharedMemory",
-    # Models
-    "ModelSpec",
-    "UnknownModelError",
-    # Observe
-    "QualityScorer",
+    "ShortTermMemory",
     "SufficiencyChecker",
-    # Provenance
-    "Mutation",
-    "Origin",
-    # Logging
+    "ToolRegistry",
+    "TrimStep",
+    "UnknownModelError",
     "__version__",
     "configure_logging",
     "enable_debug",

@@ -14,7 +14,7 @@ from contextkit.constants import DEFAULT_TOP_K
 from contextkit.rag.chunk import Chunk
 
 if TYPE_CHECKING:
-    import chromadb
+    pass
 
 logger = logging.getLogger("contextkit")
 
@@ -22,7 +22,7 @@ logger = logging.getLogger("contextkit")
 def _import_chromadb() -> Any:
     """Import chromadb at runtime, raising a clear error if missing."""
     try:
-        import chromadb as _chromadb  # noqa: WPS433
+        import chromadb as _chromadb
 
         return _chromadb
     except ImportError as exc:
@@ -101,7 +101,7 @@ class ChromaRetriever:
         metadatas = (results.get("metadatas") or [[]])[0]
         distances = (results.get("distances") or [[]])[0]
 
-        for doc, meta, dist in zip(documents, metadatas, distances):
+        for doc, meta, dist in zip(documents, metadatas, distances, strict=False):
             meta = meta or {}
             source = str(meta.pop(self._source_field, ""))
             # Chroma returns L2 distances; convert to a 0-1 score
@@ -122,6 +122,6 @@ class ChromaRetriever:
         try:
             await self._get_collection()
             return True
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug("Chroma health check failed", exc_info=True)
             return False

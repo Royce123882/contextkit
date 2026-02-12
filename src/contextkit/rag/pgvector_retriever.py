@@ -23,7 +23,7 @@ logger = logging.getLogger("contextkit")
 def _import_asyncpg() -> Any:
     """Import asyncpg at runtime, raising a clear error if missing."""
     try:
-        import asyncpg as _asyncpg  # noqa: WPS433
+        import asyncpg as _asyncpg
 
         return _asyncpg
     except ImportError as exc:
@@ -140,7 +140,7 @@ class PgvectorRetriever:
             async with pool.acquire() as conn:
                 row = await conn.fetchval("SELECT 1")
                 return row == 1
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug("pgvector health check failed", exc_info=True)
             return False
 

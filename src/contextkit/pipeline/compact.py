@@ -13,6 +13,7 @@ keyword retention catches this before it reaches the model.
 from __future__ import annotations
 
 import asyncio
+import concurrent.futures
 import hashlib
 import logging
 from collections.abc import Awaitable, Callable
@@ -152,9 +153,7 @@ class CompactStep(PipelineStep):
     # LLM compaction
     # ------------------------------------------------------------------
 
-    def _compact_with_llm_sync(
-        self, block: ContextBlock
-    ) -> tuple[str, str | None]:
+    def _compact_with_llm_sync(self, block: ContextBlock) -> tuple[str, str | None]:
         """Run LLM compaction synchronously, saving original to store."""
         assert self._llm is not None
         content = str(block.content)
@@ -172,20 +171,14 @@ class CompactStep(PipelineStep):
                 loop = None
 
             if loop and loop.is_running():
-                import concurrent.futures
-
-                with concurrent.futures.ThreadPoolExecutor(
-                    max_workers=1
-                ) as pool:
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                     ref_uri = pool.submit(
                         asyncio.run, self._store.save(key, markdown)
                     ).result()
             else:
                 ref_uri = asyncio.run(self._store.save(key, markdown))
 
-        prompt = _COMPACTION_PROMPT_TEMPLATE.format(
-            numbered_content=numbered_content
-        )
+        prompt = _COMPACTION_PROMPT_TEMPLATE.format(numbered_content=numbered_content)
         compacted = self._llm(prompt)
         return compacted, ref_uri
 
@@ -202,9 +195,7 @@ class CompactStep(PipelineStep):
 
         ref_uri = await self._store.save(key, markdown) if self._store else None
 
-        prompt = _COMPACTION_PROMPT_TEMPLATE.format(
-            numbered_content=numbered_content
-        )
+        prompt = _COMPACTION_PROMPT_TEMPLATE.format(numbered_content=numbered_content)
 
         if self._async_llm is not None:
             compacted = await self._async_llm(prompt)
@@ -284,9 +275,7 @@ class CompactStep(PipelineStep):
             sections.append(f"## [{idx}]\n{para}")
         return "\n\n".join(sections)
 
-    def _build_markdown(
-        self, block: ContextBlock, numbered_content: str
-    ) -> str:
+    def _build_markdown(self, block: ContextBlock, numbered_content: str) -> str:
         """Build the full markdown document to save to the store."""
         now = datetime.now(timezone.utc).isoformat()
         header = (
@@ -298,11 +287,8 @@ class CompactStep(PipelineStep):
 
     def _make_key(self, block: ContextBlock) -> str:
         """Generate a unique key for the compaction artifact."""
-        content_hash = hashlib.sha256(
-            str(block.content).encode()
-        ).hexdigest()[:12]
+        content_hash = hashlib.sha256(str(block.content).encode()).hexdigest()[:12]
         safe_name = "".join(
-            c if c.isalnum() or c in "-_" else "_"
-            for c in block.display_name
+            c if c.isalnum() or c in "-_" else "_" for c in block.display_name
         )
         return f"{safe_name}_{content_hash}"

@@ -22,7 +22,7 @@ logger = logging.getLogger("contextkit")
 def _import_qdrant_client() -> Any:
     """Import qdrant_client at runtime, raising a clear error if missing."""
     try:
-        import qdrant_client as _qdrant_client  # noqa: WPS433
+        import qdrant_client as _qdrant_client
 
         return _qdrant_client
     except ImportError as exc:
@@ -63,7 +63,7 @@ class QdrantRetriever:
         score_threshold: float = 0.0,
     ) -> None:
         qdrant = _import_qdrant_client()
-        AsyncQdrantClient = qdrant.AsyncQdrantClient
+        client_cls = qdrant.AsyncQdrantClient
 
         self._collection = collection_name
         self._embed_fn = embed_fn
@@ -72,9 +72,9 @@ class QdrantRetriever:
         self._score_threshold = score_threshold
 
         if url is not None:
-            self._client: AsyncQdrantClient = AsyncQdrantClient(url=url, api_key=api_key)
+            self._client: AsyncQdrantClient = client_cls(url=url, api_key=api_key)
         elif location is not None:
-            self._client = AsyncQdrantClient(location=location)
+            self._client = client_cls(location=location)
         else:
             raise ValueError("Either 'url' or 'location' must be provided")
 
@@ -127,6 +127,6 @@ class QdrantRetriever:
         try:
             info = await self._client.get_collection(self._collection)
             return info.status.value == "green"
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug("Qdrant health check failed", exc_info=True)
             return False

@@ -19,7 +19,7 @@ logger = logging.getLogger("contextkit")
 def _import_pinecone() -> Any:
     """Import pinecone at runtime, raising a clear error if missing."""
     try:
-        import pinecone as _pinecone  # noqa: WPS433
+        import pinecone as _pinecone
 
         return _pinecone
     except ImportError as exc:
@@ -106,6 +106,6 @@ class PineconeRetriever:
         try:
             stats = self._index.describe_index_stats()
             return stats is not None
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.debug("Pinecone health check failed", exc_info=True)
             return False

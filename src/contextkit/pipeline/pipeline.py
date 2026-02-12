@@ -57,7 +57,7 @@ class ContextPipeline:
         cls,
         max_tokens: int | None = None,
         query: str | None = None,
-    ) -> "ContextPipeline":
+    ) -> ContextPipeline:
         """Create a balanced pipeline with sensible defaults.
 
         Deduplicates near-duplicates, filters low-relevance content,
@@ -83,7 +83,7 @@ class ContextPipeline:
         cls,
         max_tokens: int | None = None,
         query: str | None = None,
-    ) -> "ContextPipeline":
+    ) -> ContextPipeline:
         """Create an aggressive pipeline for maximum compression.
 
         Applies tight deduplication, strict filtering, budget trimming,
@@ -112,7 +112,7 @@ class ContextPipeline:
     def conservative(
         cls,
         max_tokens: int | None = None,
-    ) -> "ContextPipeline":
+    ) -> ContextPipeline:
         """Create a conservative pipeline with minimal changes.
 
         Only deduplicates near-exact matches and trims to budget.
@@ -271,37 +271,9 @@ class ContextPipeline:
         logger.debug("Running step '%s' on %d blocks", step.name, blocks_before_count)
         processed_blocks = step.process(blocks)
 
-        tokens_after = sum(b.token_count for b in processed_blocks)
-        blocks_after_count = len(processed_blocks)
-
-        if tokens_before != tokens_after:
-            logger.debug(
-                "Step '%s': %s -> %s tokens, %d blocks -> %d blocks",
-                step.name,
-                f"{tokens_before:,}",
-                f"{tokens_after:,}",
-                blocks_before_count,
-                blocks_after_count,
-            )
-
-        report = StepReport(
-            step_name=step.name,
-            blocks_modified=abs(blocks_before_count - blocks_after_count),
-            blocks_removed=blocks_before_count - blocks_after_count,
-            tokens_before=tokens_before,
-            tokens_after=tokens_after,
-            tokens_saved=tokens_before - tokens_after,
+        report = self._build_step_report(
+            step, tokens_before, blocks_before_count, processed_blocks
         )
-
-        emit(
-            PipelineEventData(
-                event=ContextEvent.PIPELINE_STEP,
-                step_name=step.name,
-                tokens_before=tokens_before,
-                tokens_after=tokens_after,
-            )
-        )
-
         return report, processed_blocks
 
     async def _execute_step_async(
@@ -328,6 +300,31 @@ class ContextPipeline:
         )
         processed_blocks = await step.async_process(blocks)
 
+        report = self._build_step_report(
+            step, tokens_before, blocks_before_count, processed_blocks
+        )
+        return report, processed_blocks
+
+    def _build_step_report(
+        self,
+        step: PipelineStep,
+        tokens_before: int,
+        blocks_before_count: int,
+        processed_blocks: List[ContextBlock],
+    ) -> StepReport:
+        """Build a step report and emit the step event.
+
+        Shared by both sync and async execution paths.
+
+        Args:
+            step: The pipeline step that was executed.
+            tokens_before: Total tokens before the step ran.
+            blocks_before_count: Number of blocks before the step ran.
+            processed_blocks: The blocks returned by the step.
+
+        Returns:
+            A StepReport summarizing what changed.
+        """
         tokens_after = sum(b.token_count for b in processed_blocks)
         blocks_after_count = len(processed_blocks)
 
@@ -359,7 +356,7 @@ class ContextPipeline:
             )
         )
 
-        return report, processed_blocks
+        return report
 
     def _build_report(
         self,

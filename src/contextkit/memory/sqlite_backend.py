@@ -81,7 +81,7 @@ _UPDATE_ACCESS_SQL = (
 
 def _import_aiosqlite() -> Any:
     """Import aiosqlite at runtime, raising a clear error if missing."""
-    import aiosqlite as _aiosqlite  # noqa: WPS433
+    import aiosqlite as _aiosqlite
 
     return _aiosqlite
 
@@ -126,7 +126,7 @@ class SQLiteBackend:
             for sql in _MIGRATE_ACCESS_COLUMNS_SQL:
                 try:
                     await db.execute(sql)
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: S110
                     # sqlite3.OperationalError when column already exists;
                     # broad catch because aiosqlite may wrap the error.
                     pass
@@ -280,7 +280,7 @@ class SQLiteBackend:
         sql = _SELECT_ALL_SQL
         params: List[str] = []
         if tags:
-            conditions = [f"tags LIKE ?" for _ in tags]
+            conditions = ["tags LIKE ?" for _ in tags]
             params = [f'%"{tag}"%' for tag in tags]
             sql += " WHERE " + " AND ".join(conditions)
         if limit:
@@ -313,7 +313,7 @@ class SQLiteBackend:
         sql = _SELECT_ALL_SQL
         params: List[str] = []
         if tags:
-            conditions = [f"tags LIKE ?" for _ in tags]
+            conditions = ["tags LIKE ?" for _ in tags]
             params = [f'%"{tag}"%' for tag in tags]
             sql += " WHERE " + " AND ".join(conditions)
 
@@ -322,16 +322,6 @@ class SQLiteBackend:
             async with db.execute(sql, params) as cursor:
                 async for row in cursor:
                     records.append(_row_to_record(row))
-        return records
-
-    async def _fetch_all_records(self) -> List[MemoryRecord]:
-        """Load all records from the database."""
-        records: List[MemoryRecord] = []
-        async with self._connect() as db:
-            async with db.execute(_SELECT_ALL_SQL) as cursor:
-                async for row in cursor:
-                    record = _row_to_record(row)
-                    records.append(record)
         return records
 
     async def record_count(self) -> int:
@@ -370,9 +360,7 @@ def _row_to_record(row: Any) -> MemoryRecord:
     ) = row
 
     last_accessed = (
-        datetime.fromisoformat(last_accessed_iso)
-        if last_accessed_iso
-        else None
+        datetime.fromisoformat(last_accessed_iso) if last_accessed_iso else None
     )
 
     return MemoryRecord(

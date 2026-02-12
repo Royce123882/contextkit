@@ -17,10 +17,10 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
-    import asyncpg
+    pass
 
 from contextkit.constants import (
     DECAY_WEIGHT,
@@ -79,6 +79,22 @@ SET access_count = $2, last_accessed = $3
 WHERE key = $1
 """
 
+_RETRIEVE_LIMIT: int = 1000
+"""Maximum rows fetched before in-memory scoring during retrieval."""
+
+
+def _import_asyncpg() -> Any:
+    """Import asyncpg at runtime, raising a clear error if missing."""
+    try:
+        import asyncpg as _asyncpg
+
+        return _asyncpg
+    except ImportError as exc:
+        raise ImportError(
+            "asyncpg is required for PostgresBackend. "
+            "Install it with: pip install contextkit[pgvector]"
+        ) from exc
+
 
 class PostgresBackend:
     """PostgreSQL-backed memory storage with decay and access tracking.
@@ -100,7 +116,7 @@ class PostgresBackend:
         pool = await asyncpg.create_pool(dsn)
 
         rag = PgvectorRetriever(dsn=dsn, embed_fn=embed)
-        memory = PostgresBackend(pool=pool)   # shares the same Postgres
+        memory = PostgresBackend(pool=pool)  # shares the same Postgres
 
     Args:
         dsn: PostgreSQL connection string.  Ignored when *pool* is
@@ -129,9 +145,7 @@ class PostgresBackend:
     async def _ensure_pool(self) -> Any:
         """Lazily create the connection pool and ensure the table exists."""
         if self._pool is None:
-            import asyncpg
-
-            self._pool = await asyncpg.create_pool(
+            self._pool = await _import_asyncpg().create_pool(
                 self._dsn,
                 min_size=self._pool_min_size,
                 max_size=self._pool_max_size,
@@ -198,7 +212,7 @@ class PostgresBackend:
         self,
         query: str,
         top_k: int = DEFAULT_TOP_K,
-        tags: Optional[List[str]] = None,
+        tags: List[str] | None = None,
     ) -> List[MemoryRecord]:
         """Retrieve records ranked by relevance, importance, and decay.
 
@@ -215,9 +229,6 @@ class PostgresBackend:
         """
         pool = await self._ensure_pool()
 
-        # Build query with optional tag filtering and a LIMIT cap
-        # to reduce in-memory scoring overhead on large datasets.
-        _RETRIEVE_LIMIT = 1000
         sql = _SELECT_ALL_SQL
         params: List[Any] = []
         if tags:
@@ -280,7 +291,7 @@ class PostgresBackend:
 
     async def list_records(
         self,
-        tags: Optional[List[str]] = None,
+        tags: List[str] | None = None,
         offset: int = 0,
         limit: int = 0,
     ) -> List[MemoryRecord]:
