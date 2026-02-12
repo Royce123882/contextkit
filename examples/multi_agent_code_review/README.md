@@ -1,54 +1,92 @@
 # Multi-Agent Code Review
 
-Three specialized agents collaborate on a code review using isolated context scopes, shared memory, structured handoffs, and pipeline optimization.
+A FastAPI-powered code review service where three specialized agents (Architect, Security Analyst, Code Reviewer) collaborate using contextkit for isolated context scopes, shared memory, structured handoffs, and pipeline optimization.
 
-## Architecture
+## Setup
 
+```bash
+cd examples/multi_agent_code_review
+
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate   # Linux/macOS
+# .venv\Scripts\activate    # Windows
+
+# Install dependencies
+pip install -r requirements.txt
 ```
-PR Code Diff (shared memory)
-    |
-    +-------------------+--------------------+
-    |                   |                    |
-    v                   v                    v
-+------------+   +---------------+   +---------------+
-| Architect  |   | Security      |   | Code Reviewer |
-| Agent      |   | Analyst       |   | (Synthesizer) |
-|            |   |               |   |               |
-| - Design   |   | - SQL inject  |   | - Consolidate |
-| - Types    |   | - Auth checks |   | - Prioritize  |
-| - SRP      |   | - Data expose |   | - Decision    |
-| - Errors   |   | - Rate limits |   | - Fix plan    |
-+-----+------+   +------+--------+   +-------+-------+
-      |                  |                    ^
-      |   Publish to     |                    |
-      |  Shared Memory   |          Receive   |
-      +--------+---------+         Handoffs   |
-               |                              |
-               +------> Shared Memory --------+
-```
-
-## Agent Workflow
-
-1. **Architect Agent**: Reviews code structure, API design, type safety, and error handling. Publishes architecture findings to shared memory.
-
-2. **Security Analyst Agent**: Imports architect findings + code, runs static analysis and tests, identifies vulnerabilities (SQL injection, missing auth, data exposure). Publishes security findings.
-
-3. **Code Reviewer Agent**: Receives handoffs from both agents, synthesizes all findings, prioritizes issues, and produces a final review decision with actionable fix plan.
-
-## Features Demonstrated
-
-- **Scoped contexts**: Each agent has an isolated ContextScope with its own window and scratchpad
-- **Shared memory**: Cross-agent block exchange (PR code, findings published and imported)
-- **Handoff protocol**: Structured context transfer with metadata between agents
-- **Scratchpad**: Per-agent working notes transferred via handoffs
-- **RAG**: Coding standards knowledge base queried per agent's focus area
-- **Tools**: Static analysis and test runner with captured outputs
-- **Pipeline**: Deduplication, trimming, and reordering on the final synthesized context
-- **Observability**: Sufficiency checking, quality scoring, and per-agent timeline tracking
-- **Long-term memory**: Project configuration and incident history
 
 ## Running
 
 ```bash
-python examples/multi_agent_code_review/main.py
+# From the project root
+uvicorn examples.multi_agent_code_review.main:app --reload --port 8002
+```
+
+The API docs are available at `http://localhost:8002/docs`.
+
+## API Endpoints
+
+| Method | Path                  | Description                          |
+|--------|-----------------------|--------------------------------------|
+| POST   | `/review`             | Submit code for multi-agent review   |
+| GET    | `/review/{review_id}` | Get review summary                   |
+| GET    | `/health`             | Health check with component status   |
+
+## Example Request
+
+```bash
+curl -X POST http://localhost:8002/review \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "@router.put(\"/users/{user_id}\")\nasync def update_profile(user_id: int, data: dict):\n    query = f\"UPDATE users SET name='"'"'{data[\"name\"]}'"'"' WHERE id={user_id}\"\n    await db.execute(query)\n    return {\"status\": \"updated\"}",
+    "description": "PR #342: Add user profile update endpoint"
+  }'
+```
+
+## Agent Workflow
+
+```
+POST /review
+    |
+    v
+SharedMemory.publish("pr_code")    -> Code available to all agents
+    |
+    +--- Agent 1: Architect ---+
+    |   ContextScope (isolated) |
+    |   RAG: coding standards   |
+    |   Scratchpad: design notes|
+    |   -> Publish findings     |
+    +---------------------------+
+    |
+    +--- Agent 2: Security ----+
+    |   ContextScope (isolated) |
+    |   Import: architect work  |
+    |   Tools: static analysis  |
+    |   Tools: test runner      |
+    |   Scratchpad: vuln notes  |
+    |   -> Publish findings     |
+    +---------------------------+
+    |
+    +--- Agent 3: Synthesizer -+
+    |   ContextScope (isolated) |
+    |   Receive: both handoffs  |
+    |   Import: original code   |
+    |   Pipeline: dedup + trim  |
+    |   -> Decision + fix plan  |
+    +---------------------------+
+    |
+    v
+  Consolidated ReviewResult
+```
+
+## Project Structure
+
+```
+multi_agent_code_review/
+├── main.py             # FastAPI app with routes + initialization
+├── agents.py           # Three agent functions (architect, security, synthesizer)
+├── models.py           # Pydantic request/response models
+├── requirements.txt    # Dependencies
+└── README.md
 ```
