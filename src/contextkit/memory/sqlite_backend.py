@@ -126,8 +126,10 @@ class SQLiteBackend:
             for sql in _MIGRATE_ACCESS_COLUMNS_SQL:
                 try:
                     await db.execute(sql)
-                except Exception:
-                    pass  # Column already exists
+                except Exception:  # noqa: BLE001
+                    # sqlite3.OperationalError when column already exists;
+                    # broad catch because aiosqlite may wrap the error.
+                    pass
 
             await db.commit()
         self._initialized = True
@@ -287,9 +289,12 @@ class SQLiteBackend:
                     records.append(record)
         return records
 
-    @property
     async def record_count(self) -> int:
-        """Count the number of records in the database."""
+        """Count the number of records in the database.
+
+        Returns:
+            The total number of stored records.
+        """
         await self._ensure_table()
 
         async with self._connect() as db:

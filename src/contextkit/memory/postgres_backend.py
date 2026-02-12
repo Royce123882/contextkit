@@ -315,9 +315,12 @@ class PostgresBackend:
         except Exception:
             return False
 
-    @property
     async def record_count(self) -> int:
-        """Number of records currently stored."""
+        """Count the number of records in the database.
+
+        Returns:
+            The total number of stored records.
+        """
         pool = await self._ensure_pool()
         async with pool.acquire() as conn:
             return await conn.fetchval(_COUNT_SQL)

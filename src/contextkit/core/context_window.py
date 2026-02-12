@@ -74,6 +74,8 @@ class ContextWindow:
 
     def _init_with_manual_tokens(self, max_tokens: int) -> None:
         """Configure the window with manual token limits."""
+        if max_tokens <= 0:
+            raise ValueError(f"max_tokens must be positive, got {max_tokens}")
         self._model_name = None
         self._max_tokens = max_tokens
         self._encoding = DEFAULT_ENCODING
@@ -424,11 +426,6 @@ class ContextWindow:
         (e.g. ContextAssembler, ContextPipeline).
         """
         self._check_budget_warnings()
-
-    # -- Keep private aliases for backwards compatibility --
-    def _add_no_check(self, block: ContextBlock) -> None:
-        """Delegate to add_unchecked (kept for compatibility)."""
-        self.add_unchecked(block)
 
     def __repr__(self) -> str:
         """Return a developer-friendly string representation."""

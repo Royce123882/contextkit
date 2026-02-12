@@ -92,7 +92,7 @@ def _build_summary_rows(window: ContextWindow, has_model: bool) -> List[List[str
         ]
 
         if has_model:
-            cost = block.token_count * window._input_cost_per_mtok / 1_000_000
+            cost = block.token_count * window.input_cost_per_mtok / 1_000_000
             row.append(f"${cost:.4f}")
 
         row.extend([budget_pct, origin_str])

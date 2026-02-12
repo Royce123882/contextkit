@@ -359,10 +359,10 @@ class TestSQLiteBackend:
     def test_record_count(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             backend = self._make_backend(tmp)
-            count = asyncio.run(backend.record_count)
+            count = asyncio.run(backend.record_count())
             assert count == 0
             asyncio.run(backend.store("k1", "a"))
-            count = asyncio.run(backend.record_count)
+            count = asyncio.run(backend.record_count())
             assert count == 1
 
     def test_with_long_term_memory(self) -> None:

@@ -14,7 +14,7 @@ Reorders blocks for optimal attention patterns. Supports two strategies:
 
 from __future__ import annotations
 
-from typing import List, Set
+from typing import List, Set, Tuple
 
 from contextkit.core import ContextBlock
 from contextkit.core.block import BlockType
@@ -39,7 +39,14 @@ class ReorderStep(PipelineStep):
             then applies important-edges within the dynamic section.
     """
 
+    _VALID_STRATEGIES = {"important_edges", "prefix_stable"}
+
     def __init__(self, strategy: str = "important_edges") -> None:
+        if strategy not in self._VALID_STRATEGIES:
+            raise ValueError(
+                f"Unknown strategy {strategy!r}. "
+                f"Choose from: {', '.join(sorted(self._VALID_STRATEGIES))}"
+            )
         self._strategy = strategy
 
     @property
@@ -120,13 +127,21 @@ class ReorderStep(PipelineStep):
         if len(dynamic_blocks) > 2:
             dynamic_blocks = self._reorder_edges(dynamic_blocks)
 
-        ordered = [b for _, b in stable] + dynamic_blocks
+        # Map each dynamic block back to its original index
+        dynamic_orig_idx = {id(b): i for i, b in dynamic}
+
+        # Build ordered list with original indices preserved
+        ordered_pairs: List[Tuple[int, ContextBlock]] = [
+            (orig_idx, b) for orig_idx, b in stable
+        ]
+        ordered_pairs += [
+            (dynamic_orig_idx.get(id(b), -1), b) for b in dynamic_blocks
+        ]
+
+        ordered = [b for _, b in ordered_pairs]
 
         # Record mutations for blocks whose position changed
-        for new_pos, block in enumerate(ordered):
-            orig_idx = next(
-                i for i, b in indexed if b is block
-            )
+        for new_pos, (orig_idx, block) in enumerate(ordered_pairs):
             if new_pos != orig_idx:
                 region = "prefix" if block.type in _STABLE_BLOCK_TYPES else "dynamic"
                 block.mutations.append(

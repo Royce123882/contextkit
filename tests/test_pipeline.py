@@ -4,6 +4,8 @@ compact, compress, RAG compress, mask, and the pipeline orchestrator.
 
 from __future__ import annotations
 
+import pytest
+
 from contextkit.core import BlockType, ContextBlock, ContextWindow
 from contextkit.observe.provenance import Origin
 from contextkit.pipeline import (
@@ -299,15 +301,9 @@ class TestReorderStep:
         step = ReorderStep()
         assert step.name == "ReorderStep"
 
-    def test_unknown_strategy_passthrough(self) -> None:
-        step = ReorderStep(strategy="unknown")
-        blocks = [
-            _make_block("a", priority=10),
-            _make_block("b", priority=50),
-            _make_block("c", priority=90),
-        ]
-        result = step.process(blocks)
-        assert len(result) == 3
+    def test_unknown_strategy_raises(self) -> None:
+        with pytest.raises(ValueError, match="Unknown strategy"):
+            ReorderStep(strategy="unknown")
 
 
 class TestCompactStep:
