@@ -7,7 +7,8 @@ from __future__ import annotations
 from datetime import datetime
 
 from contextkit.core import BlockType, ContextBlock
-from contextkit.observe.events import ContextEvent, clear_handlers, register_handler
+from contextkit.observe.event_models import ContextEvent
+from contextkit.observe.events import clear_handlers, register_handler
 from contextkit.observe.provenance import Mutation, Origin
 from contextkit.observe.quality import QualityScorer
 from contextkit.observe.quality_models import PositionScore, QualityReport

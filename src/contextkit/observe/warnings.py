@@ -9,11 +9,8 @@ from __future__ import annotations
 import logging
 from typing import List, Set
 
-from contextkit.observe.events import (
-    BudgetEventData,
-    ContextEvent,
-    emit,
-)
+from contextkit.observe.event_models import BudgetEventData, ContextEvent
+from contextkit.observe.events import emit
 
 logger = logging.getLogger("contextkit")
 

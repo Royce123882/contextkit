@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-from contextkit.observe.events import (
+from contextkit.observe.event_models import (
     BlockEventData,
     BudgetEventData,
     ContextEvent,
     EventData,
     PipelineEventData,
+)
+from contextkit.observe.events import (
     clear_handlers,
     emit,
     on,

@@ -11,7 +11,8 @@ import logging
 from typing import Any, Dict, List
 
 from contextkit.core import BlockType, ContextWindow
-from contextkit.observe.events import BlockEventData, ContextEvent, emit
+from contextkit.observe.event_models import BlockEventData, ContextEvent
+from contextkit.observe.events import emit
 
 logger = logging.getLogger("contextkit")
 

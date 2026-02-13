@@ -20,12 +20,12 @@ from contextkit.constants import (
 from contextkit.core.block import BlockType, ContextBlock
 from contextkit.exceptions import BudgetExceededError
 from contextkit.models import get_model
-from contextkit.observe.events import (
+from contextkit.observe.event_models import (
     BlockEventData,
     BudgetEventData,
     ContextEvent,
-    emit,
 )
+from contextkit.observe.events import emit
 from contextkit.observe.diff import diff_windows
 from contextkit.observe.explain import explain_block
 from contextkit.observe.inspect import dump_window, inspect_window

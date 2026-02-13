@@ -8,7 +8,8 @@ from typing import List, Tuple
 from contextkit.assembler.report import AssemblyReport, BlockDecision
 from contextkit.core.block import ContextBlock
 from contextkit.core.context_window import ContextWindow
-from contextkit.observe.events import ContextEvent, EventData, emit
+from contextkit.observe.event_models import ContextEvent, EventData
+from contextkit.observe.events import emit
 
 logger = logging.getLogger("contextkit")
 

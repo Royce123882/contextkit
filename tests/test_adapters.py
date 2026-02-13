@@ -6,7 +6,7 @@ from contextkit.adapters.anthropic_adapter import AnthropicAdapter
 from contextkit.adapters.openai_adapter import OpenAIAdapter
 from contextkit.core import BlockType, ContextBlock, ContextWindow
 from contextkit.events import ContextEvent, clear_handlers, on
-from contextkit.observe.events import EventData
+from contextkit.observe.event_models import EventData
 
 
 class TestAnthropicAdapter:

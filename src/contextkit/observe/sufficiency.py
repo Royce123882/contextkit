@@ -18,7 +18,8 @@ from typing import List
 from contextkit.constants import DEFAULT_MIN_AVG_RELEVANCE, DEFAULT_MIN_QUERY_COVERAGE
 from contextkit.core import ContextBlock
 from contextkit.core.block import BlockType
-from contextkit.observe.events import ContextEvent, EventData, emit
+from contextkit.observe.event_models import ContextEvent, EventData
+from contextkit.observe.events import emit
 from contextkit.observe.sufficiency_models import SufficiencyResult
 from contextkit.utils.text_similarity import word_overlap_score
 

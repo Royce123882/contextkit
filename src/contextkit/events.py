@@ -4,12 +4,14 @@ Provides the decorator-based API for registering context lifecycle
 event callbacks.
 """
 
-from contextkit.observe.events import (
+from contextkit.observe.event_models import (
     BlockEventData,
     BudgetEventData,
     ContextEvent,
     EventData,
     PipelineEventData,
+)
+from contextkit.observe.events import (
     clear_handlers,
     emit,
     on,

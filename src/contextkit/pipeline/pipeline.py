@@ -13,13 +13,14 @@ import logging
 from typing import TYPE_CHECKING, List, Tuple
 
 from contextkit.core import ContextBlock, ContextWindow
-from contextkit.observe.events import (
+from contextkit.observe.event_models import (
     ContextEvent,
     EventData,
     PipelineEventData,
-    emit,
 )
-from contextkit.pipeline.base import PipelineReport, PipelineStep, StepReport
+from contextkit.observe.events import emit
+from contextkit.pipeline.base import PipelineStep
+from contextkit.pipeline.base_models import PipelineReport, StepReport
 from contextkit.pipeline.deduplicate import DeduplicateStep
 from contextkit.pipeline.filter import FilterStep
 from contextkit.pipeline.mask import MaskStep

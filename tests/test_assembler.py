@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextkit.assembler import AssemblyReport, BlockDecision, ContextAssembler
 from contextkit.core import BlockType, ContextBlock, ContextWindow
 from contextkit.events import ContextEvent, clear_handlers, on
-from contextkit.observe.events import EventData
+from contextkit.observe.event_models import EventData
 from contextkit.observe.provenance import Origin
 
 

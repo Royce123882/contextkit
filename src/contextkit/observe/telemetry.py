@@ -20,7 +20,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from contextkit.observe.events import ContextEvent, EventData, register_handler
+from contextkit.observe.event_models import ContextEvent, EventData
+from contextkit.observe.events import register_handler
 
 logger = logging.getLogger("contextkit")
 

@@ -7,7 +7,8 @@ strip_thinking) with full mutation tracking and observability.
 Also provides a ``PipelineBuilder`` for fluent pipeline construction.
 """
 
-from contextkit.pipeline.base import PipelineReport, PipelineStep, StepReport
+from contextkit.pipeline.base import PipelineStep
+from contextkit.pipeline.base_models import PipelineReport, StepReport
 from contextkit.pipeline.builder import PipelineBuilder
 from contextkit.pipeline.compact import CompactStep
 from contextkit.pipeline.deduplicate import DeduplicateStep

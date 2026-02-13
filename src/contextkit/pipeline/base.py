@@ -1,59 +1,17 @@
-"""Pipeline base classes and report models.
+"""Pipeline base class for pipeline steps.
 
-Provides the PipelineStep abstract base class (with optional
-conditional guards and async support) and the StepReport
-and PipelineReport data models used by all pipeline steps.
+Provides the PipelineStep abstract base class with optional
+conditional guards and async support.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from typing import Any, Dict, List
-
-from pydantic import BaseModel, Field
+from typing import List
 
 from contextkit.core import ContextBlock
-
-
-class StepReport(BaseModel):
-    """Report from a single pipeline step.
-
-    Attributes:
-        step_name: Name of the step.
-        blocks_modified: Number of blocks modified.
-        blocks_removed: Number of blocks removed.
-        tokens_before: Total tokens before the step.
-        tokens_after: Total tokens after the step.
-        tokens_saved: Tokens saved by this step.
-        details: Additional step-specific details.
-    """
-
-    step_name: str = Field(description="Name of the step.")
-    blocks_modified: int = Field(default=0, description="Number of blocks modified.")
-    blocks_removed: int = Field(default=0, description="Number of blocks removed.")
-    tokens_before: int = Field(default=0, description="Total tokens before the step.")
-    tokens_after: int = Field(default=0, description="Total tokens after the step.")
-    tokens_saved: int = Field(default=0, description="Tokens saved by this step.")
-    details: Dict[str, Any] = Field(default_factory=dict, description="Additional step-specific details.")
-
-
-class PipelineReport(BaseModel):
-    """Report from a full pipeline run.
-
-    Attributes:
-        steps: Reports from each step.
-        total_tokens_before: Total tokens before pipeline.
-        total_tokens_after: Total tokens after pipeline.
-        total_tokens_saved: Total tokens saved.
-        cost_delta: Estimated cost savings.
-    """
-
-    steps: List[StepReport] = Field(default_factory=list, description="Reports from each step.")
-    total_tokens_before: int = Field(default=0, description="Total tokens before pipeline.")
-    total_tokens_after: int = Field(default=0, description="Total tokens after pipeline.")
-    total_tokens_saved: int = Field(default=0, description="Total tokens saved.")
-    cost_delta: float = Field(default=0.0, description="Estimated cost savings.")
+from contextkit.pipeline.base_models import PipelineReport, StepReport
 
 
 class PipelineStep(ABC):
