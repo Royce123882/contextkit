@@ -13,12 +13,11 @@ and end is utilised effectively but middle content is often missed.
 """
 
 from __future__ import annotations
-
-import math
 from typing import List
 
 from contextkit.constants import HIGH_PRIORITY_THRESHOLD, LOW_ATTENTION_THRESHOLD
 from contextkit.core import ContextBlock
+from contextkit.utils.attention import u_curve_weight
 from contextkit.observe.quality_models import PositionScore, QualityReport
 from contextkit.utils.text_similarity import word_overlap_similarity
 
@@ -138,7 +137,7 @@ class QualityScorer:
         """
         scores: List[PositionScore] = []
         for position, block in enumerate(blocks):
-            attention = _u_curve_weight(position, total, self._curve_depth)
+            attention = u_curve_weight(position, total, self._curve_depth)
             risk = self._assess_risk(block.priority, attention)
             scores.append(
                 PositionScore(
@@ -296,23 +295,3 @@ class QualityScorer:
         return "low"
 
 
-def _u_curve_weight(position: int, total: int, curve_depth: float = 0.6) -> float:
-    """Compute attention weight using a U-shaped curve.
-
-    The edges (position 0 and position total-1) receive weight ~1.0.
-    The centre receives weight ~(1.0 - curve_depth).
-
-    Args:
-        position: Zero-based index in the sequence.
-        total: Total number of items in the sequence.
-        curve_depth: How much the trough dips (0.0-1.0). Higher
-            means the model loses more information in the middle.
-            Default 0.6 matches "Lost in the Middle" findings.
-
-    Returns:
-        Estimated attention weight for this position.
-    """
-    if total <= 2:
-        return 1.0
-    normalised = position / (total - 1)
-    return 1.0 - curve_depth * math.sin(math.pi * normalised)
