@@ -22,7 +22,8 @@ from pydantic import BaseModel, Field
 
 from contextkit.core import ContextBlock, ContextWindow
 from contextkit.core.block import BlockType
-from contextkit.models import UnknownModelError, get_model
+from contextkit.exceptions import UnknownModelError
+from contextkit.models import get_model
 from contextkit.utils.text_similarity import word_overlap_similarity
 
 

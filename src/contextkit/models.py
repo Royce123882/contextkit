@@ -11,6 +11,8 @@ from typing import Dict, List
 
 from pydantic import BaseModel, Field
 
+from contextkit.exceptions import UnknownModelError
+
 
 class AttentionProfile(BaseModel):
     """Model-specific attention curve parameters.
@@ -83,16 +85,6 @@ class ModelSpec(BaseModel):
         default=None,
         description="Model-specific attention curve parameters.",
     )
-
-
-class UnknownModelError(Exception):
-    """Raised when a model name is not found in the registry."""
-
-    def __init__(self, model_name: str) -> None:
-        self.model_name = model_name
-        super().__init__(
-            f"Unknown model: '{model_name}'. Use register_model() to add custom models."
-        )
 
 
 # Built-in model registry

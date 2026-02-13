@@ -81,6 +81,20 @@ class SyncInAsyncError(ContextKitError):
         )
 
 
+class UnknownModelError(ContextKitError):
+    """Raised when a model name is not found in the registry.
+
+    Attributes:
+        model_name: The model identifier that was not found.
+    """
+
+    def __init__(self, model_name: str) -> None:
+        self.model_name = model_name
+        super().__init__(
+            f"Unknown model: '{model_name}'. Use register_model() to add custom models."
+        )
+
+
 class BudgetExceededError(ContextKitError):
     """Raised when adding a block would exceed the token budget.
 
