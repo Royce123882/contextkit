@@ -1,18 +1,9 @@
 """Context pipeline orchestrator.
 
 Runs an ordered sequence of pipeline steps on a context window,
-collecting reports and emitting events for each step.
-
-Includes ``PipelineBuilder`` for fluent pipeline construction::
-
-    pipeline = (
-        ContextPipeline.builder()
-        .deduplicate(threshold=0.85)
-        .filter(min_relevance=0.3)
-        .trim(max_tokens=100_000, query="...")
-        .reorder("prefix_stable")
-        .build()
-    )
+collecting per-step reports and emitting events. Pipelines can be
+constructed directly via ``ContextPipeline([...])`` or through the
+fluent ``PipelineBuilder`` returned by ``ContextPipeline.builder()``.
 """
 
 from __future__ import annotations
