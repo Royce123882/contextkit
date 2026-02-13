@@ -47,6 +47,9 @@ class ContextPipeline:
 
     Args:
         steps: Ordered list of PipelineStep instances.
+        capture_snapshots: If True, deep-copy the block list before
+            each step runs. Snapshots are available via the
+            :attr:`snapshots` property after :meth:`run` completes.
     """
 
     def __init__(
@@ -278,7 +281,18 @@ class ContextPipeline:
         blocks: List[ContextBlock],
         window: ContextWindow,
     ) -> List[StepReport]:
-        """Execute all pipeline steps synchronously and collect reports."""
+        """Execute all pipeline steps synchronously and collect reports.
+
+        Modifies *blocks* in place via slice assignment and replaces
+        the window's block list when all steps are done.
+
+        Args:
+            blocks: Mutable list of context blocks to transform.
+            window: The owning window (updated via ``replace_blocks``).
+
+        Returns:
+            List of per-step reports.
+        """
         self._snapshots.clear()
         step_reports: List[StepReport] = []
 
@@ -299,7 +313,15 @@ class ContextPipeline:
         step: PipelineStep,
         blocks: List[ContextBlock],
     ) -> Tuple[StepReport, List[ContextBlock]]:
-        """Execute a single pipeline step synchronously and return its report."""
+        """Execute a single pipeline step synchronously.
+
+        Args:
+            step: The pipeline step to execute.
+            blocks: Current list of context blocks.
+
+        Returns:
+            Tuple of (step report, processed blocks).
+        """
         tokens_before = sum(block.token_count for block in blocks)
         blocks_before_count = len(blocks)
 
@@ -400,7 +422,17 @@ class ContextPipeline:
         total_tokens_after: int,
         window: ContextWindow,
     ) -> PipelineReport:
-        """Build the final pipeline report with cost delta."""
+        """Build the final pipeline report with cost delta.
+
+        Args:
+            step_reports: Reports from each executed step.
+            total_tokens_before: Token count before the pipeline ran.
+            total_tokens_after: Token count after the pipeline ran.
+            window: The window, used for per-token cost calculation.
+
+        Returns:
+            A PipelineReport summarizing the full pipeline run.
+        """
         cost_before = total_tokens_before * window.input_cost_per_mtok / 1_000_000
         cost_after = total_tokens_after * window.input_cost_per_mtok / 1_000_000
 
