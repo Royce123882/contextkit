@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Dict, List
 
 from contextkit.exceptions import UnknownModelError
-from contextkit.model_models import ATTENTION_PROFILES, AttentionProfile, ModelSpec
+from contextkit.model_spec import ATTENTION_PROFILES, AttentionProfile, ModelSpec
 
 
 # Built-in model registry

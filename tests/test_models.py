@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 
 from contextkit.exceptions import UnknownModelError
-from contextkit.model_models import AttentionProfile, ModelSpec
-from contextkit.models import get_model, list_models, register_model
+from contextkit.model_spec import AttentionProfile, ModelSpec
+from contextkit.model_registry import get_model, list_models, register_model
 
 
 class TestModelSpec:

@@ -25,7 +25,7 @@ from contextkit import (
 )
 from contextkit.adapters import AnthropicAdapter, OpenAIAdapter
 from contextkit.events import ContextEvent, clear_handlers, on
-from contextkit.models import get_model, list_models, register_model
+from contextkit.model_registry import get_model, list_models, register_model
 from contextkit.observe.event_models import BlockEventData, BudgetEventData
 from contextkit.tokens import count, fits_budget
 

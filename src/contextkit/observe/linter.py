@@ -21,7 +21,7 @@ from typing import List
 from contextkit.core import ContextBlock, ContextWindow
 from contextkit.core.block import BlockType
 from contextkit.exceptions import UnknownModelError
-from contextkit.models import get_model
+from contextkit.model_registry import get_model
 from contextkit.observe.linter_models import LintWarning
 from contextkit.utils.text_similarity import word_overlap_similarity
 

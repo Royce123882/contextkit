@@ -19,7 +19,7 @@ from contextkit.constants import (
 )
 from contextkit.core.block import BlockType, ContextBlock
 from contextkit.exceptions import BudgetExceededError
-from contextkit.models import get_model
+from contextkit.model_registry import get_model
 from contextkit.observe.event_models import (
     BlockEventData,
     BudgetEventData,

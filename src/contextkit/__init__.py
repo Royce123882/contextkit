@@ -26,7 +26,7 @@ from contextkit.core import (
 from contextkit.files import FileContext
 from contextkit.logging import configure_logging, enable_debug, silence
 from contextkit.memory import LongTermMemory, ShortTermMemory
-from contextkit.model_models import AttentionProfile, ModelSpec
+from contextkit.model_spec import AttentionProfile, ModelSpec
 from contextkit.exceptions import UnknownModelError
 from contextkit.observe import QualityScorer, SufficiencyChecker
 from contextkit.observe.provenance import Mutation, Origin
