@@ -26,7 +26,7 @@ from contextkit.core import (
 from contextkit.files import FileContext
 from contextkit.logging import configure_logging, enable_debug, silence
 from contextkit.memory import LongTermMemory, ShortTermMemory
-from contextkit.models import ModelSpec, UnknownModelError
+from contextkit.models import AttentionProfile, ModelSpec, UnknownModelError
 from contextkit.observe import QualityScorer, SufficiencyChecker
 from contextkit.observe.provenance import Mutation, Origin
 from contextkit.pipeline import (
@@ -35,9 +35,12 @@ from contextkit.pipeline import (
     DeduplicateStep,
     FilterStep,
     MaskStep,
+    PipelineBuilder,
     PipelineStep,
+    PruneStaleStep,
     RAGCompressStep,
     ReorderStep,
+    StripThinkingStep,
     TrimStep,
 )
 from contextkit.prompts import PromptManager
@@ -48,6 +51,7 @@ from contextkit.tools import ToolRegistry
 __all__ = [
     "AnthropicAdapter",
     "AssemblyReport",
+    "AttentionProfile",
     "BedrockAdapter",
     "BlockDecision",
     "BlockType",
@@ -72,8 +76,10 @@ __all__ = [
     "OllamaAdapter",
     "OpenAIAdapter",
     "Origin",
+    "PipelineBuilder",
     "PipelineStep",
     "PromptManager",
+    "PruneStaleStep",
     "QualityScorer",
     "RAGCompressStep",
     "RAGContext",
@@ -81,6 +87,7 @@ __all__ = [
     "Scratchpad",
     "SharedMemory",
     "ShortTermMemory",
+    "StripThinkingStep",
     "SufficiencyChecker",
     "ToolRegistry",
     "TrimStep",

@@ -33,20 +33,57 @@ class QualityScorer:
     Also computes signal-to-noise ratio, redundancy, and
     information density metrics.
 
+    The U-curve depth can be adapted per model via ``curve_depth``.
+    Newer long-context models (Claude 4.x, GPT-4.1) lose less
+    information in the middle and should use a shallower curve
+    (lower depth). See :class:`~contextkit.models.AttentionProfile`.
+
     Args:
         high_priority_threshold: Blocks at or above this priority
             are considered "important" and checked for position risk.
         low_attention_threshold: Attention weight below this value
             is considered a risky position for important blocks.
+        curve_depth: Depth of the U-curve trough (0.0-1.0). Controls
+            how much the scorer penalises middle positions. Default
+            0.6 matches the original "Lost in the Middle" findings.
+            Pass a lower value (e.g. 0.3) for strong long-context
+            models. Can also be set from a model's AttentionProfile.
     """
 
     def __init__(
         self,
         high_priority_threshold: int = HIGH_PRIORITY_THRESHOLD,
         low_attention_threshold: float = LOW_ATTENTION_THRESHOLD,
+        curve_depth: float = 0.6,
     ) -> None:
         self._priority_threshold = high_priority_threshold
         self._attention_threshold = low_attention_threshold
+        self._curve_depth = max(0.0, min(1.0, curve_depth))
+
+    @classmethod
+    def for_model(cls, model_name: str) -> "QualityScorer":
+        """Create a QualityScorer tuned for a specific model.
+
+        Looks up the model's AttentionProfile and configures the
+        U-curve depth accordingly. Falls back to the standard
+        profile if the model is not found or has no profile.
+
+        Args:
+            model_name: A registered model name (e.g. "claude-opus-4-6").
+
+        Returns:
+            A QualityScorer with model-appropriate curve depth.
+        """
+        from contextkit.models import get_model, UnknownModelError
+
+        try:
+            spec = get_model(model_name)
+        except UnknownModelError:
+            return cls()
+
+        if spec.attention_profile is not None:
+            return cls(curve_depth=spec.attention_profile.curve_depth)
+        return cls()
 
     def score(self, blocks: List[ContextBlock]) -> QualityReport:
         """Produce a quality report for the given block sequence.
@@ -101,7 +138,7 @@ class QualityScorer:
         """
         scores: List[PositionScore] = []
         for position, block in enumerate(blocks):
-            attention = _u_curve_weight(position, total)
+            attention = _u_curve_weight(position, total, self._curve_depth)
             risk = self._assess_risk(block.priority, attention)
             scores.append(
                 PositionScore(
@@ -259,16 +296,18 @@ class QualityScorer:
         return "low"
 
 
-def _u_curve_weight(position: int, total: int) -> float:
+def _u_curve_weight(position: int, total: int, curve_depth: float = 0.6) -> float:
     """Compute attention weight using a U-shaped curve.
 
-    Returns a value in approximately [0.4, 1.0] where the edges
-    (position 0 and position total-1) receive weight ~1.0 and
-    the centre receives weight ~0.4.
+    The edges (position 0 and position total-1) receive weight ~1.0.
+    The centre receives weight ~(1.0 - curve_depth).
 
     Args:
         position: Zero-based index in the sequence.
         total: Total number of items in the sequence.
+        curve_depth: How much the trough dips (0.0-1.0). Higher
+            means the model loses more information in the middle.
+            Default 0.6 matches "Lost in the Middle" findings.
 
     Returns:
         Estimated attention weight for this position.
@@ -276,4 +315,4 @@ def _u_curve_weight(position: int, total: int) -> float:
     if total <= 2:
         return 1.0
     normalised = position / (total - 1)
-    return 1.0 - 0.6 * math.sin(math.pi * normalised)
+    return 1.0 - curve_depth * math.sin(math.pi * normalised)

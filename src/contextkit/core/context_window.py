@@ -442,7 +442,11 @@ class ContextWindow:
         return self
 
     def _raise_budget_exceeded(self, block: ContextBlock, block_tokens: int) -> None:
-        """Emit a BUDGET_EXCEEDED event and raise BudgetExceededError."""
+        """Emit a BUDGET_EXCEEDED event and raise BudgetExceededError.
+
+        Collects low-priority blocks that could be removed to make space,
+        sorted by priority ascending (lowest priority first).
+        """
         emit(
             BudgetEventData(
                 event=ContextEvent.BUDGET_EXCEEDED,
@@ -454,11 +458,25 @@ class ContextWindow:
                 },
             )
         )
+
+        # Find removable blocks sorted by priority (lowest first)
+        median_priority = 50
+        removable_blocks = sorted(
+            [
+                (existing_block.display_name, existing_block.token_count)
+                for existing_block in self._blocks
+                if existing_block.priority <= median_priority
+            ],
+            key=lambda pair: pair[1],
+            reverse=True,
+        )
+
         raise BudgetExceededError(
             block_name=block.display_name,
             block_tokens=block_tokens,
             budget_remaining=self.budget_remaining,
             max_tokens=self._max_tokens,
+            removable_blocks=removable_blocks,
         )
 
     def _emit_block_added_event(self, block: ContextBlock) -> None:
@@ -502,6 +520,165 @@ class ContextWindow:
         from contextkit.observe.linter import ContextLinter
 
         return ContextLinter().lint(self)
+
+    # ------------------------------------------------------------------
+    # Fluent convenience methods
+    # ------------------------------------------------------------------
+
+    def with_system(
+        self,
+        content: str,
+        *,
+        priority: int | None = None,
+        name: str | None = None,
+    ) -> "ContextWindow":
+        """Add a system prompt block and return self for chaining.
+
+        Args:
+            content: The system prompt text.
+            priority: Optional priority override.
+            name: Optional display name.
+
+        Returns:
+            This ContextWindow instance.
+        """
+        from contextkit.constants import PRIORITY_SYSTEM_PROMPT
+
+        block = ContextBlock.system(
+            content, priority=priority or PRIORITY_SYSTEM_PROMPT, name=name
+        )
+        return self.add(block)
+
+    def with_rag(
+        self,
+        content: str,
+        *,
+        priority: int | None = None,
+        name: str | None = None,
+    ) -> "ContextWindow":
+        """Add a RAG block and return self for chaining.
+
+        Args:
+            content: The retrieved content.
+            priority: Optional priority override.
+            name: Optional display name.
+
+        Returns:
+            This ContextWindow instance.
+        """
+        from contextkit.constants import PRIORITY_RAG_CHUNK
+
+        block = ContextBlock.rag(
+            content, priority=priority or PRIORITY_RAG_CHUNK, name=name
+        )
+        return self.add(block)
+
+    def with_memory(
+        self,
+        content: str | list,
+        *,
+        priority: int | None = None,
+        name: str | None = None,
+    ) -> "ContextWindow":
+        """Add a memory block and return self for chaining.
+
+        Args:
+            content: Memory content (string or message list).
+            priority: Optional priority override.
+            name: Optional display name.
+
+        Returns:
+            This ContextWindow instance.
+        """
+        from contextkit.constants import PRIORITY_SHORT_TERM_MEMORY
+
+        block = ContextBlock(
+            type=BlockType.SHORT_TERM_MEMORY,
+            content=content,
+            priority=priority or PRIORITY_SHORT_TERM_MEMORY,
+            name=name or "memory",
+        )
+        return self.add(block)
+
+    def with_tools(
+        self,
+        content: str,
+        *,
+        priority: int | None = None,
+        name: str | None = None,
+    ) -> "ContextWindow":
+        """Add a tool definitions block and return self for chaining.
+
+        Args:
+            content: Tool definitions content.
+            priority: Optional priority override.
+            name: Optional display name.
+
+        Returns:
+            This ContextWindow instance.
+        """
+        from contextkit.constants import PRIORITY_TOOL_DEFINITION
+
+        block = ContextBlock(
+            type=BlockType.TOOL_DEFINITIONS,
+            content=content,
+            priority=priority or PRIORITY_TOOL_DEFINITION,
+            name=name or "tools",
+        )
+        return self.add(block)
+
+    def with_examples(
+        self,
+        content: str | list,
+        *,
+        priority: int | None = None,
+        name: str | None = None,
+    ) -> "ContextWindow":
+        """Add an examples block and return self for chaining.
+
+        Args:
+            content: Example content (string or message list).
+            priority: Optional priority override.
+            name: Optional display name.
+
+        Returns:
+            This ContextWindow instance.
+        """
+        from contextkit.constants import PRIORITY_EXAMPLE
+
+        block = ContextBlock.examples(
+            content, priority=priority or PRIORITY_EXAMPLE, name=name
+        )
+        return self.add(block)
+
+    def with_file(
+        self,
+        content: str,
+        *,
+        file_path: str = "",
+        priority: int | None = None,
+        name: str | None = None,
+    ) -> "ContextWindow":
+        """Add a file context block and return self for chaining.
+
+        Args:
+            content: The file content.
+            file_path: Path to the source file.
+            priority: Optional priority override.
+            name: Optional display name.
+
+        Returns:
+            This ContextWindow instance.
+        """
+        from contextkit.constants import PRIORITY_FILE_CONTEXT
+
+        block = ContextBlock.file(
+            content,
+            file_path=file_path,
+            priority=priority or PRIORITY_FILE_CONTEXT,
+            name=name,
+        )
+        return self.add(block)
 
     def __repr__(self) -> str:
         """Return a developer-friendly string representation."""

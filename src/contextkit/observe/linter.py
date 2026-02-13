@@ -83,6 +83,7 @@ class ContextLinter:
         warnings.extend(self._check_oversized_blocks(window))
         warnings.extend(self._check_redundant_blocks(window))
         warnings.extend(self._check_empty_blocks(window))
+        warnings.extend(self._check_effective_window(window))
         return warnings
 
     def _check_missing_system_prompt(
@@ -236,6 +237,55 @@ class ContextLinter:
             seen_blocks.append(block)
 
         return warnings
+
+    def _check_effective_window(
+        self,
+        window: ContextWindow,
+    ) -> List[LintWarning]:
+        """Warn if token count exceeds the model's effective window size.
+
+        Research basis: arXiv:2509.21361 -- significant gaps between
+        advertised and effective context window sizes. Models often
+        degrade well before hitting advertised limits.
+
+        Args:
+            window: The ContextWindow to check.
+
+        Returns:
+            A list with one warning if exceeding effective limits.
+        """
+        if window.model_name is None:
+            return []
+
+        from contextkit.models import get_model, UnknownModelError
+
+        try:
+            spec = get_model(window.model_name)
+        except UnknownModelError:
+            return []
+
+        effective = spec.effective_max_tokens
+        if effective is None:
+            return []
+
+        if window.token_count > effective:
+            percentage = window.token_count / spec.max_context * 100
+            return [
+                LintWarning(
+                    code="exceeds_effective_window",
+                    message=(
+                        f"Token count ({window.token_count:,}) exceeds the "
+                        f"effective window ({effective:,} tokens) for model "
+                        f"'{window.model_name}'. The advertised limit is "
+                        f"{spec.max_context:,} but quality degrades beyond "
+                        f"{effective:,}. Currently at {percentage:.0f}% of "
+                        f"advertised capacity. Consider trimming context or "
+                        f"using a pipeline."
+                    ),
+                    severity="warning",
+                )
+            ]
+        return []
 
     def _check_empty_blocks(
         self,
