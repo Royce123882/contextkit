@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from contextkit.models import (
+    AttentionProfile,
     ModelSpec,
     UnknownModelError,
     get_model,
@@ -126,3 +127,46 @@ class TestListModels:
     def test_list_models_has_at_least_six(self) -> None:
         models = list_models()
         assert len(models) >= 6
+
+
+# ---------------------------------------------------------------------------
+# Effective window profiles and attention profiles
+# ---------------------------------------------------------------------------
+
+
+class TestEffectiveWindowProfiles:
+    """Tests for effective_max_tokens and AttentionProfile on ModelSpec."""
+
+    def test_model_has_effective_max_tokens(self) -> None:
+        spec = get_model("claude-opus-4-6")
+        assert spec.effective_max_tokens is not None
+        assert spec.effective_max_tokens < spec.max_context
+
+    def test_model_has_attention_profile(self) -> None:
+        spec = get_model("claude-opus-4-6")
+        assert spec.attention_profile is not None
+        assert spec.attention_profile.curve_depth == 0.3
+
+    def test_gpt4o_has_standard_profile(self) -> None:
+        spec = get_model("gpt-4o")
+        assert spec.attention_profile is not None
+        assert spec.attention_profile.curve_depth == 0.6
+
+    def test_custom_model_without_effective_tokens(self) -> None:
+        register_model(
+            "test-custom-no-effective",
+            ModelSpec(
+                max_context=50_000,
+                encoding="cl100k_base",
+                input_cost_per_mtok=1.0,
+                output_cost_per_mtok=5.0,
+            ),
+        )
+        spec = get_model("test-custom-no-effective")
+        assert spec.effective_max_tokens is None
+        assert spec.attention_profile is None
+
+    def test_attention_profile_standalone(self) -> None:
+        profile = AttentionProfile(curve_depth=0.4, label="custom")
+        assert profile.curve_depth == 0.4
+        assert profile.label == "custom"

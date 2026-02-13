@@ -508,3 +508,119 @@ class TestContextWindow:
     def test_encoding_default_for_manual_tokens(self) -> None:
         window = ContextWindow(max_tokens=1000)
         assert window.encoding == "cl100k_base"
+
+
+# ---------------------------------------------------------------------------
+# Fluent ContextWindow API (with_* methods)
+# ---------------------------------------------------------------------------
+
+
+class TestFluentContextWindow:
+    """Tests for the with_* fluent methods on ContextWindow."""
+
+    def test_with_system(self) -> None:
+        window = ContextWindow(max_tokens=100_000)
+        result = window.with_system("You are a helpful assistant.")
+        assert result is window
+        assert len(window) == 1
+        assert window.blocks[0].type == BlockType.SYSTEM_PROMPT
+
+    def test_chaining_multiple_with_methods(self) -> None:
+        window = (
+            ContextWindow(max_tokens=100_000)
+            .with_system("Be helpful.")
+            .with_rag("Retrieved document content.")
+            .with_memory("User said hello previously.")
+        )
+        assert len(window) == 3
+        types = [b.type for b in window.blocks]
+        assert BlockType.SYSTEM_PROMPT in types
+        assert BlockType.RAG in types
+        assert BlockType.SHORT_TERM_MEMORY in types
+
+    def test_with_tools(self) -> None:
+        window = ContextWindow(max_tokens=100_000)
+        window.with_tools("tool definitions JSON")
+        assert window.blocks[0].type == BlockType.TOOL_DEFINITIONS
+
+    def test_with_examples(self) -> None:
+        window = ContextWindow(max_tokens=100_000)
+        window.with_examples("Q: What is 2+2? A: 4")
+        assert window.blocks[0].type == BlockType.EXAMPLES
+
+    def test_with_file(self) -> None:
+        window = ContextWindow(max_tokens=100_000)
+        window.with_file("file content", file_path="/tmp/test.py", name="test_file")
+        block = window.blocks[0]
+        assert block.type == BlockType.FILES
+        assert block.display_name == "test_file"
+
+    def test_with_custom_priority(self) -> None:
+        window = ContextWindow(max_tokens=100_000)
+        window.with_rag("doc content", priority=90, name="important_doc")
+        assert window.blocks[0].priority == 90
+        assert window.blocks[0].display_name == "important_doc"
+
+
+# ---------------------------------------------------------------------------
+# Enhanced BudgetExceededError
+# ---------------------------------------------------------------------------
+
+
+class TestEnhancedBudgetExceededError:
+    """Tests for context-aware budget error messages."""
+
+    def test_error_includes_tokens_needed(self) -> None:
+        error = BudgetExceededError(
+            block_name="big_block",
+            block_tokens=5000,
+            budget_remaining=1000,
+            max_tokens=100_000,
+        )
+        assert "4,000 more" in str(error)
+
+    def test_error_includes_removable_blocks(self) -> None:
+        error = BudgetExceededError(
+            block_name="big_block",
+            block_tokens=5000,
+            budget_remaining=1000,
+            max_tokens=100_000,
+            removable_blocks=[("low_priority_doc", 3000), ("old_memory", 2000)],
+        )
+        message = str(error)
+        assert "low_priority_doc" in message
+        assert "5,000 tokens available" in message
+
+    def test_error_without_removable_blocks(self) -> None:
+        error = BudgetExceededError(
+            block_name="block",
+            block_tokens=100,
+            budget_remaining=50,
+            max_tokens=1000,
+        )
+        message = str(error)
+        assert "Suggestions:" in message
+        assert "Remove low-priority" not in message
+
+    def test_window_raises_with_removable_info(self) -> None:
+        # Filler block is ~28 tokens. Budget is 40 so filler fits, but
+        # overflow (~28 tokens) won't fit in remaining 12.
+        window = ContextWindow(max_tokens=40)
+        filler = ContextBlock(
+            type=BlockType.USER_CONTEXT,
+            content="alpha beta gamma delta " * 5,
+            priority=30,
+            name="filler",
+        )
+        window.add(filler)
+        with pytest.raises(BudgetExceededError) as exc_info:
+            overflow = ContextBlock(
+                type=BlockType.USER_CONTEXT,
+                content="echo foxtrot golf hotel " * 5,
+                priority=50,
+                name="overflow",
+            )
+            window.add(overflow)
+        # The filler block has priority 30 (<= 50 threshold), so it should appear
+        assert len(exc_info.value.removable_blocks) > 0
+        assert exc_info.value.removable_blocks[0][0] == "filler"

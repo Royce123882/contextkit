@@ -1,5 +1,6 @@
 """Tests for the context pipeline: trim, filter, deduplicate, reorder,
-compact, RAG compress, mask, and the pipeline orchestrator.
+compact, RAG compress, mask, prune stale, strip thinking,
+the pipeline orchestrator, and the PipelineBuilder.
 """
 
 from __future__ import annotations
@@ -16,9 +17,11 @@ from contextkit.pipeline import (
     FilterStep,
     MaskStep,
     PipelineReport,
+    PruneStaleStep,
     RAGCompressStep,
     ReorderStep,
     StepReport,
+    StripThinkingStep,
     TrimStep,
 )
 
@@ -966,3 +969,288 @@ class TestAsyncContextPipeline:
         await ContextPipeline(steps=[trim_step]).arun(async_window)
 
         assert sync_window.token_count == async_window.token_count
+
+
+# ---------------------------------------------------------------------------
+# PipelineBuilder (fluent API)
+# ---------------------------------------------------------------------------
+
+
+def _make_tool_block(
+    name: str,
+    content: str = "tool output",
+    tool_name: str = "search",
+    turn_number: int = 0,
+    origin: Origin | None = None,
+) -> ContextBlock:
+    """Helper to create tool output blocks with metadata."""
+    return ContextBlock(
+        type=BlockType.TOOL_OUTPUTS,
+        content=content,
+        priority=50,
+        name=name,
+        metadata={"tool_name": tool_name, "turn_number": turn_number},
+        origin=origin,
+    )
+
+
+class TestPipelineBuilder:
+    """Tests for the fluent PipelineBuilder API."""
+
+    def test_builder_basic_pipeline(self) -> None:
+        pipeline = (
+            ContextPipeline.builder()
+            .deduplicate(threshold=0.9)
+            .trim(max_tokens=50_000)
+            .reorder("important_edges")
+            .build()
+        )
+        assert len(pipeline.steps) == 3
+        assert pipeline.steps[0].name == "DeduplicateStep"
+        assert pipeline.steps[1].name == "TrimStep"
+        assert pipeline.steps[2].name == "ReorderStep"
+
+    def test_builder_empty_raises(self) -> None:
+        with pytest.raises(ValueError, match="Cannot build an empty pipeline"):
+            ContextPipeline.builder().build()
+
+    def test_builder_with_filter_and_mask(self) -> None:
+        pipeline = (
+            ContextPipeline.builder()
+            .filter(min_relevance=0.5)
+            .mask(window=5)
+            .build()
+        )
+        assert len(pipeline.steps) == 2
+        assert pipeline.steps[0].name == "FilterStep"
+        assert pipeline.steps[1].name == "MaskStep"
+
+    def test_builder_with_custom_step(self) -> None:
+        custom = TrimStep(max_tokens=10_000)
+        pipeline = ContextPipeline.builder().step(custom).build()
+        assert len(pipeline.steps) == 1
+
+    def test_builder_capture_snapshots(self) -> None:
+        pipeline = (
+            ContextPipeline.builder()
+            .deduplicate()
+            .capture_snapshots(True)
+            .build()
+        )
+        window = ContextWindow(max_tokens=100_000)
+        window.add(_make_block("a", "hello world"))
+        pipeline.run(window)
+        assert len(pipeline.snapshots) > 0
+
+    def test_builder_prune_stale(self) -> None:
+        pipeline = (
+            ContextPipeline.builder()
+            .prune_stale(max_age_turns=5, keep_last_per_tool=2)
+            .build()
+        )
+        assert len(pipeline.steps) == 1
+        assert pipeline.steps[0].name == "PruneStaleStep"
+
+    def test_builder_strip_thinking(self) -> None:
+        pipeline = (
+            ContextPipeline.builder()
+            .strip_thinking()
+            .build()
+        )
+        assert len(pipeline.steps) == 1
+        assert pipeline.steps[0].name == "StripThinkingStep"
+
+    def test_builder_full_agentic_pipeline(self) -> None:
+        """Build a realistic agent pipeline with all step types."""
+        pipeline = (
+            ContextPipeline.builder()
+            .strip_thinking()
+            .prune_stale(max_age_turns=10)
+            .deduplicate(threshold=0.85)
+            .filter(min_relevance=0.3)
+            .trim(max_tokens=100_000)
+            .reorder("prefix_stable")
+            .build()
+        )
+        assert len(pipeline.steps) == 6
+
+
+# ---------------------------------------------------------------------------
+# PruneStaleStep
+# ---------------------------------------------------------------------------
+
+
+class TestPruneStaleStep:
+    """Tests for stale tool output pruning."""
+
+    def test_keeps_non_tool_blocks(self) -> None:
+        step = PruneStaleStep()
+        blocks = [
+            _make_block("system", block_type=BlockType.SYSTEM_PROMPT),
+            _make_block("memory", block_type=BlockType.SHORT_TERM_MEMORY),
+        ]
+        result = step.process(blocks)
+        assert len(result) == 2
+
+    def test_keeps_single_tool_output(self) -> None:
+        step = PruneStaleStep()
+        blocks = [_make_tool_block("search_result", tool_name="search")]
+        result = step.process(blocks)
+        assert len(result) == 1
+
+    def test_prunes_superseded_tool_outputs(self) -> None:
+        step = PruneStaleStep(keep_last_per_tool=1)
+        blocks = [
+            _make_tool_block("search_old", content="old", tool_name="search", turn_number=1),
+            _make_tool_block("search_new", content="new", tool_name="search", turn_number=5),
+        ]
+        result = step.process(blocks)
+        assert len(result) == 1
+        assert result[0].display_name == "search_new"
+
+    def test_keeps_last_n_per_tool(self) -> None:
+        step = PruneStaleStep(keep_last_per_tool=2)
+        blocks = [
+            _make_tool_block("s1", tool_name="search", turn_number=1),
+            _make_tool_block("s2", tool_name="search", turn_number=2),
+            _make_tool_block("s3", tool_name="search", turn_number=3),
+        ]
+        result = step.process(blocks)
+        assert len(result) == 2
+        names = [b.display_name for b in result]
+        assert "s2" in names
+        assert "s3" in names
+
+    def test_max_age_turns(self) -> None:
+        step = PruneStaleStep(max_age_turns=3, keep_last_per_tool=1)
+        blocks = [
+            _make_tool_block("old", tool_name="calc", turn_number=1),
+            _make_tool_block("recent", tool_name="calc", turn_number=8),
+            _make_tool_block("other", tool_name="search", turn_number=7),
+        ]
+        result = step.process(blocks)
+        assert len(result) == 2
+
+    def test_records_mutations(self) -> None:
+        step = PruneStaleStep(keep_last_per_tool=1)
+        old_block = _make_tool_block("old", tool_name="search")
+        blocks = [
+            old_block,
+            _make_tool_block("new", tool_name="search"),
+        ]
+        step.process(blocks)
+        assert len(old_block.mutations) == 1
+        assert old_block.mutations[0].action == "removed"
+
+    def test_different_tools_independent(self) -> None:
+        step = PruneStaleStep(keep_last_per_tool=1)
+        blocks = [
+            _make_tool_block("s1", tool_name="search"),
+            _make_tool_block("c1", tool_name="calc"),
+        ]
+        result = step.process(blocks)
+        assert len(result) == 2
+
+    def test_extracts_tool_name_from_origin(self) -> None:
+        step = PruneStaleStep(keep_last_per_tool=1)
+        origin = Origin.from_tool("web_search")
+        blocks = [
+            _make_tool_block("old", origin=origin),
+            _make_tool_block("new", origin=origin),
+        ]
+        result = step.process(blocks)
+        assert len(result) == 1
+        assert result[0].display_name == "new"
+
+    def test_step_name(self) -> None:
+        step = PruneStaleStep()
+        assert step.name == "PruneStaleStep"
+
+
+# ---------------------------------------------------------------------------
+# StripThinkingStep
+# ---------------------------------------------------------------------------
+
+
+class TestStripThinkingStep:
+    """Tests for reasoning trace stripping."""
+
+    def test_strips_thinking_tags(self) -> None:
+        step = StripThinkingStep()
+        blocks = [
+            _make_block("response", content="<thinking>internal reasoning</thinking>The answer is 42."),
+        ]
+        result = step.process(blocks)
+        assert len(result) == 1
+        assert "<thinking>" not in result[0].content
+        assert "The answer is 42." in result[0].content
+
+    def test_strips_scratchpad_tags(self) -> None:
+        step = StripThinkingStep()
+        blocks = [
+            _make_block("response", content="<scratchpad>notes here</scratchpad>Final answer."),
+        ]
+        result = step.process(blocks)
+        assert "scratchpad" not in result[0].content
+        assert "Final answer." in result[0].content
+
+    def test_strips_multiline_thinking(self) -> None:
+        step = StripThinkingStep()
+        content = (
+            "Before.\n"
+            "<thinking>\nLine 1\nLine 2\nLine 3\n</thinking>\n"
+            "After."
+        )
+        blocks = [_make_block("response", content=content)]
+        result = step.process(blocks)
+        assert "Line 1" not in result[0].content
+        assert "Before." in result[0].content
+        assert "After." in result[0].content
+
+    def test_removes_empty_blocks_after_stripping(self) -> None:
+        step = StripThinkingStep(strip_empty=True)
+        blocks = [_make_block("thinking_only", content="<thinking>just thinking</thinking>")]
+        result = step.process(blocks)
+        assert len(result) == 0
+
+    def test_keeps_empty_blocks_when_strip_empty_false(self) -> None:
+        step = StripThinkingStep(strip_empty=False)
+        blocks = [_make_block("thinking_only", content="<thinking>just thinking</thinking>")]
+        result = step.process(blocks)
+        assert len(result) == 1
+
+    def test_no_change_when_no_patterns_match(self) -> None:
+        step = StripThinkingStep()
+        blocks = [_make_block("clean", content="No reasoning traces here.")]
+        result = step.process(blocks)
+        assert len(result) == 1
+        assert result[0].content == "No reasoning traces here."
+
+    def test_preserves_list_content_blocks(self) -> None:
+        step = StripThinkingStep()
+        blocks = [
+            ContextBlock(
+                type=BlockType.SHORT_TERM_MEMORY,
+                content=[{"role": "user", "content": "hello"}],
+                name="messages",
+            ),
+        ]
+        result = step.process(blocks)
+        assert len(result) == 1
+
+    def test_custom_patterns(self) -> None:
+        step = StripThinkingStep(patterns=[r"\[INTERNAL\].*?\[/INTERNAL\]"])
+        blocks = [_make_block("custom", content="[INTERNAL]secret[/INTERNAL]visible")]
+        result = step.process(blocks)
+        assert result[0].content == "visible"
+
+    def test_records_mutation_on_strip(self) -> None:
+        step = StripThinkingStep()
+        block = _make_block("response", content="<thinking>hmm</thinking>answer")
+        step.process([block])
+        assert len(block.mutations) == 1
+        assert block.mutations[0].action == "compressed"
+
+    def test_step_name(self) -> None:
+        step = StripThinkingStep()
+        assert step.name == "StripThinkingStep"

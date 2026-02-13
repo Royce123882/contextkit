@@ -264,21 +264,21 @@ class ContextLinter:
         except UnknownModelError:
             return []
 
-        effective = spec.effective_max_tokens
-        if effective is None:
+        effective_token_limit = spec.effective_max_tokens
+        if effective_token_limit is None:
             return []
 
-        if window.token_count > effective:
+        if window.token_count > effective_token_limit:
             percentage = window.token_count / spec.max_context * 100
             return [
                 LintWarning(
                     code="exceeds_effective_window",
                     message=(
                         f"Token count ({window.token_count:,}) exceeds the "
-                        f"effective window ({effective:,} tokens) for model "
+                        f"effective window ({effective_token_limit:,} tokens) for model "
                         f"'{window.model_name}'. The advertised limit is "
                         f"{spec.max_context:,} but quality degrades beyond "
-                        f"{effective:,}. Currently at {percentage:.0f}% of "
+                        f"{effective_token_limit:,}. Currently at {percentage:.0f}% of "
                         f"advertised capacity. Consider trimming context or "
                         f"using a pipeline."
                     ),

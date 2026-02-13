@@ -459,13 +459,13 @@ class ContextWindow:
             )
         )
 
-        # Find removable blocks sorted by priority (lowest first)
-        median_priority = 50
+        # Find removable blocks sorted by token count (largest first)
+        removable_priority_threshold = 50
         removable_blocks = sorted(
             [
                 (existing_block.display_name, existing_block.token_count)
                 for existing_block in self._blocks
-                if existing_block.priority <= median_priority
+                if existing_block.priority <= removable_priority_threshold
             ],
             key=lambda pair: pair[1],
             reverse=True,

@@ -389,3 +389,72 @@ class TestContextSufficiencyChecker:
         checker = SufficiencyChecker()
         result = checker.check("test query", [_make_block("test_block", content="test")])
         assert 0.0 <= result.confidence <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# Model-adaptive QualityScorer (curve_depth and for_model)
+# ---------------------------------------------------------------------------
+
+
+class TestModelAdaptiveQualityScorer:
+    """Tests for model-adaptive attention curve depth in QualityScorer."""
+
+    def test_default_curve_depth(self) -> None:
+        scorer = QualityScorer()
+        blocks = [_make_block(f"b{i}", priority=80) for i in range(10)]
+        report = scorer.score(blocks)
+        assert 0.0 <= report.overall_score <= 1.0
+
+    def test_shallow_curve_higher_scores(self) -> None:
+        """A shallower curve should give higher scores for middle blocks."""
+        blocks = [_make_block(f"b{i}", priority=80) for i in range(10)]
+
+        standard_scorer = QualityScorer(curve_depth=0.6)
+        shallow_scorer = QualityScorer(curve_depth=0.3)
+
+        standard_report = standard_scorer.score(blocks)
+        shallow_report = shallow_scorer.score(blocks)
+
+        assert shallow_report.overall_score >= standard_report.overall_score
+
+    def test_for_model_factory(self) -> None:
+        scorer = QualityScorer.for_model("claude-opus-4-6")
+        assert scorer._curve_depth == 0.3
+
+    def test_for_model_unknown_model(self) -> None:
+        scorer = QualityScorer.for_model("nonexistent-model")
+        assert scorer._curve_depth == 0.6
+
+    def test_for_model_standard_profile(self) -> None:
+        scorer = QualityScorer.for_model("gpt-4o")
+        assert scorer._curve_depth == 0.6
+
+
+# ---------------------------------------------------------------------------
+# Effective window lint check
+# ---------------------------------------------------------------------------
+
+
+class TestEffectiveWindowLint:
+    """Tests for the exceeds_effective_window lint check."""
+
+    def test_no_warning_below_effective_limit(self) -> None:
+        from contextkit.core import ContextWindow
+        from contextkit.observe.linter import ContextLinter
+
+        window = ContextWindow(model="gpt-4o")
+        window.add(_make_block("small", content="hello"))
+        linter = ContextLinter()
+        warnings = linter.lint(window)
+        effective_warnings = [w for w in warnings if w.code == "exceeds_effective_window"]
+        assert len(effective_warnings) == 0
+
+    def test_no_warning_for_manual_window(self) -> None:
+        from contextkit.core import ContextWindow
+        from contextkit.observe.linter import ContextLinter
+
+        window = ContextWindow(max_tokens=100_000)
+        linter = ContextLinter()
+        warnings = linter.lint(window)
+        effective_warnings = [w for w in warnings if w.code == "exceeds_effective_window"]
+        assert len(effective_warnings) == 0

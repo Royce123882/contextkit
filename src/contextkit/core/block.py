@@ -330,13 +330,13 @@ class BudgetExceededError(Exception):
 
         if self.removable_blocks:
             total_removable = sum(tokens for _, tokens in self.removable_blocks)
-            block_list = ", ".join(
+            removable_summary = ", ".join(
                 f"'{name}' ({tokens:,}t)"
                 for name, tokens in self.removable_blocks[:3]
             )
             lines.append(
                 f"  - Remove low-priority blocks ({total_removable:,} tokens "
-                f"available): {block_list}"
+                f"available): {removable_summary}"
             )
 
         super().__init__("\n".join(lines))
