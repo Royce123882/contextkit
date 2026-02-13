@@ -5,15 +5,15 @@ from __future__ import annotations
 import pytest
 
 from contextkit.exceptions import UnknownModelError
-from contextkit.model_spec import AttentionProfile, ModelSpec
-from contextkit.model_registry import get_model, list_models, register_model
+from contextkit.llm_spec import AttentionProfile, LLMSpec
+from contextkit.llm_registry import get_model, list_models, register_model
 
 
-class TestModelSpec:
-    """Tests for the ModelSpec model."""
+class TestLLMSpec:
+    """Tests for the LLMSpec model."""
 
     def test_create_model_spec(self) -> None:
-        spec = ModelSpec(
+        spec = LLMSpec(
             max_context=32_000,
             encoding="cl100k_base",
             input_cost_per_mtok=0.50,
@@ -65,7 +65,7 @@ class TestRegisterModel:
     """Tests for custom model registration."""
 
     def test_register_and_lookup(self) -> None:
-        spec = ModelSpec(
+        spec = LLMSpec(
             max_context=32_000,
             encoding="cl100k_base",
             input_cost_per_mtok=0.50,
@@ -77,13 +77,13 @@ class TestRegisterModel:
         assert result.input_cost_per_mtok == 0.50
 
     def test_register_overwrites_existing(self) -> None:
-        spec1 = ModelSpec(
+        spec1 = LLMSpec(
             max_context=10_000,
             encoding="cl100k_base",
             input_cost_per_mtok=1.0,
             output_cost_per_mtok=2.0,
         )
-        spec2 = ModelSpec(
+        spec2 = LLMSpec(
             max_context=20_000,
             encoding="cl100k_base",
             input_cost_per_mtok=1.5,
@@ -110,7 +110,7 @@ class TestListModels:
     def test_list_models_includes_registered(self) -> None:
         register_model(
             "list-test-model",
-            ModelSpec(
+            LLMSpec(
                 max_context=1000,
                 encoding="cl100k_base",
                 input_cost_per_mtok=0,
@@ -130,7 +130,7 @@ class TestListModels:
 
 
 class TestEffectiveWindowProfiles:
-    """Tests for effective_max_tokens and AttentionProfile on ModelSpec."""
+    """Tests for effective_max_tokens and AttentionProfile on LLMSpec."""
 
     def test_model_has_effective_max_tokens(self) -> None:
         spec = get_model("claude-opus-4-6")
@@ -150,7 +150,7 @@ class TestEffectiveWindowProfiles:
     def test_custom_model_without_effective_tokens(self) -> None:
         register_model(
             "test-custom-no-effective",
-            ModelSpec(
+            LLMSpec(
                 max_context=50_000,
                 encoding="cl100k_base",
                 input_cost_per_mtok=1.0,

@@ -1,4 +1,4 @@
-"""Data models for the model registry."""
+"""Data models for LLM specifications."""
 
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ ATTENTION_PROFILES: Dict[str, AttentionProfile] = {
 }
 
 
-class ModelSpec(BaseModel):
+class LLMSpec(BaseModel):
     """Specification for a language model.
 
     Attributes:

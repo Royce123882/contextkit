@@ -18,14 +18,14 @@ from contextkit import (
     ContextAssembler,
     ContextBlock,
     ContextWindow,
-    ModelSpec,
+    LLMSpec,
     Mutation,
     Origin,
     __version__,
 )
 from contextkit.adapters import AnthropicAdapter, OpenAIAdapter
 from contextkit.events import ContextEvent, clear_handlers, on
-from contextkit.model_registry import get_model, list_models, register_model
+from contextkit.llm_registry import get_model, list_models, register_model
 from contextkit.observe.event_models import BlockEventData, BudgetEventData
 from contextkit.tokens import count, fits_budget
 
@@ -54,7 +54,7 @@ class TestImportPaths:
     def test_models_imports(self) -> None:
         assert get_model is not None
         assert register_model is not None
-        assert ModelSpec is not None
+        assert LLMSpec is not None
         assert list_models is not None
 
     def test_events_imports(self) -> None:
@@ -288,7 +288,7 @@ class TestFullWorkflow:
         """Test registering and using a custom model."""
         register_model(
             "my-fine-tune",
-            ModelSpec(
+            LLMSpec(
                 max_context=32_000,
                 encoding="cl100k_base",
                 input_cost_per_mtok=0.50,

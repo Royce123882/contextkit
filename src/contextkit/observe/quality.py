@@ -18,7 +18,7 @@ from typing import List
 from contextkit.constants import HIGH_PRIORITY_THRESHOLD, LOW_ATTENTION_THRESHOLD
 from contextkit.core import ContextBlock
 from contextkit.exceptions import UnknownModelError
-from contextkit.model_registry import get_model
+from contextkit.llm_registry import get_model
 from contextkit.utils.attention import u_curve_weight
 from contextkit.observe.quality_models import PositionScore, QualityReport
 from contextkit.utils.text_similarity import word_overlap_similarity
@@ -37,7 +37,7 @@ class QualityScorer:
     The U-curve depth can be adapted per model via ``curve_depth``.
     Newer long-context models (Claude 4.x, GPT-4.1) lose less
     information in the middle and should use a shallower curve
-    (lower depth). See :class:`~contextkit.model_spec.AttentionProfile`.
+    (lower depth). See :class:`~contextkit.llm_spec.AttentionProfile`.
 
     Args:
         high_priority_threshold: Blocks at or above this priority
