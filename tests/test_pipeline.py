@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from contextkit.compaction.store import LocalCompactionStore
+from contextkit.compaction.local_store import LocalCompactionStore
 from contextkit.core import BlockType, ContextBlock, ContextWindow
 from contextkit.observe.provenance import Origin
 from contextkit.pipeline import (

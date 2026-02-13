@@ -20,7 +20,8 @@ from collections.abc import Awaitable, Callable
 from datetime import datetime, timezone
 from typing import Any, List
 
-from contextkit.compaction.store import CompactionStore, LocalCompactionStore
+from contextkit.compaction.local_store import LocalCompactionStore
+from contextkit.compaction.store import CompactionStore
 from contextkit.constants import DEFAULT_COMPACT_MIN_TOKENS
 from contextkit.core import ContextBlock
 from contextkit.observe.provenance import Mutation

@@ -13,7 +13,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from contextkit.compaction.store import CompactionStore, LocalCompactionStore
+from contextkit.compaction.local_store import LocalCompactionStore
+from contextkit.compaction.store import CompactionStore
 
 if TYPE_CHECKING:
     from contextkit.compaction.s3_store import S3CompactionStore

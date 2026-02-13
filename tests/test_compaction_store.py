@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from contextkit.compaction.store import CompactionStore, LocalCompactionStore
+from contextkit.compaction.local_store import LocalCompactionStore
+from contextkit.compaction.store import CompactionStore
 
 
 class TestLocalCompactionStore:
