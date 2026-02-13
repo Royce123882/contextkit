@@ -20,6 +20,11 @@ from contextkit.pipeline.reorder import ReorderStep
 from contextkit.pipeline.strip_thinking import StripThinkingStep
 from contextkit.pipeline.trim import TrimStep
 
+# Wire PipelineBuilder into ContextPipeline to break the circular
+# import between pipeline.py and builder.py.  Both modules are fully
+# loaded by this point, so the assignment is safe.
+ContextPipeline._builder_class = PipelineBuilder
+
 __all__ = [
     "CompactStep",
     "ContextPipeline",

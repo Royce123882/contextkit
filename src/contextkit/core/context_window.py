@@ -17,7 +17,8 @@ from contextkit.constants import (
     PRIORITY_SYSTEM_PROMPT,
     PRIORITY_TOOL_DEFINITION,
 )
-from contextkit.core.block import BlockType, BudgetExceededError, ContextBlock
+from contextkit.core.block import BlockType, ContextBlock
+from contextkit.exceptions import BudgetExceededError
 from contextkit.models import get_model
 from contextkit.observe.events import (
     BlockEventData,

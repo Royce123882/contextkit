@@ -6,6 +6,8 @@ easy to catch any SDK-level error with a single except clause.
 
 from __future__ import annotations
 
+from typing import List
+
 
 class ContextKitError(Exception):
     """Base exception for all contextkit errors."""
@@ -77,3 +79,57 @@ class SyncInAsyncError(ContextKitError):
             "Cannot use sync wrappers inside an async context. "
             "Use the async API directly (e.g., await memory.retrieve(...))."
         )
+
+
+class BudgetExceededError(ContextKitError):
+    """Raised when adding a block would exceed the token budget.
+
+    Includes context-aware suggestions when removable blocks are
+    available in the window.
+
+    Attributes:
+        block_name: Name of the block that couldn't fit.
+        block_tokens: Token count of the rejected block.
+        budget_remaining: Tokens remaining before the budget is exhausted.
+        max_tokens: Total token budget of the window.
+        removable_blocks: Pairs of (block_name, token_count) for
+            low-priority blocks that could be removed to free space.
+    """
+
+    def __init__(
+        self,
+        block_name: str,
+        block_tokens: int,
+        budget_remaining: int,
+        max_tokens: int,
+        removable_blocks: List[tuple[str, int]] | None = None,
+    ) -> None:
+        self.block_name = block_name
+        self.block_tokens = block_tokens
+        self.budget_remaining = budget_remaining
+        self.max_tokens = max_tokens
+        self.removable_blocks = removable_blocks or []
+
+        tokens_needed = block_tokens - budget_remaining
+        lines = [
+            f"Block '{block_name}' needs {block_tokens:,} tokens "
+            f"but only {budget_remaining:,} remain "
+            f"(max: {max_tokens:,}, need {tokens_needed:,} more).",
+            "",
+            "Suggestions:",
+            f"  - Run a pipeline: ContextPipeline.balanced(max_tokens={max_tokens})",
+            "  - Use window.will_fit(block) to check before adding",
+        ]
+
+        if self.removable_blocks:
+            total_removable = sum(tokens for _, tokens in self.removable_blocks)
+            removable_summary = ", ".join(
+                f"'{name}' ({tokens:,}t)"
+                for name, tokens in self.removable_blocks[:3]
+            )
+            lines.append(
+                f"  - Remove low-priority blocks ({total_removable:,} tokens "
+                f"available): {removable_summary}"
+            )
+
+        super().__init__("\n".join(lines))

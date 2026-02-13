@@ -60,6 +60,8 @@ class ContextPipeline:
     # Builder
     # ------------------------------------------------------------------
 
+    _builder_class: type[PipelineBuilder] | None = None
+
     @classmethod
     def builder(cls) -> "PipelineBuilder":
         """Create a fluent builder for constructing pipelines.
@@ -77,10 +79,19 @@ class ContextPipeline:
                 .reorder("prefix_stable")
                 .build()
             )
-        """
-        from contextkit.pipeline.builder import PipelineBuilder
 
-        return PipelineBuilder()
+        Raises:
+            RuntimeError: If called before the pipeline package is
+                fully loaded. Import from ``contextkit.pipeline``
+                rather than ``contextkit.pipeline.pipeline``.
+        """
+        if cls._builder_class is None:
+            raise RuntimeError(
+                "PipelineBuilder not registered. "
+                "Import from contextkit.pipeline instead of "
+                "contextkit.pipeline.pipeline."
+            )
+        return cls._builder_class()
 
     # ------------------------------------------------------------------
     # Preset factory methods
