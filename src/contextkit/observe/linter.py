@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field
 
 from contextkit.core import ContextBlock, ContextWindow
 from contextkit.core.block import BlockType
+from contextkit.models import UnknownModelError, get_model
 from contextkit.utils.text_similarity import word_overlap_similarity
 
 
@@ -256,8 +257,6 @@ class ContextLinter:
         """
         if window.model_name is None:
             return []
-
-        from contextkit.models import get_model, UnknownModelError
 
         try:
             spec = get_model(window.model_name)

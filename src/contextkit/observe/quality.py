@@ -17,6 +17,7 @@ from typing import List
 
 from contextkit.constants import HIGH_PRIORITY_THRESHOLD, LOW_ATTENTION_THRESHOLD
 from contextkit.core import ContextBlock
+from contextkit.models import UnknownModelError, get_model
 from contextkit.utils.attention import u_curve_weight
 from contextkit.observe.quality_models import PositionScore, QualityReport
 from contextkit.utils.text_similarity import word_overlap_similarity
@@ -73,8 +74,6 @@ class QualityScorer:
         Returns:
             A QualityScorer with model-appropriate curve depth.
         """
-        from contextkit.models import get_model, UnknownModelError
-
         try:
             spec = get_model(model_name)
         except UnknownModelError:

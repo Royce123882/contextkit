@@ -8,7 +8,15 @@ from collections.abc import Callable
 from typing import Any, Dict, List, Tuple
 
 from contextkit.utils.cache import clear_token_cache
-from contextkit.constants import DEFAULT_ENCODING
+from contextkit.constants import (
+    DEFAULT_ENCODING,
+    PRIORITY_EXAMPLE,
+    PRIORITY_FILE_CONTEXT,
+    PRIORITY_RAG_CHUNK,
+    PRIORITY_SHORT_TERM_MEMORY,
+    PRIORITY_SYSTEM_PROMPT,
+    PRIORITY_TOOL_DEFINITION,
+)
 from contextkit.core.block import BlockType, BudgetExceededError, ContextBlock
 from contextkit.models import get_model
 from contextkit.observe.events import (
@@ -542,8 +550,6 @@ class ContextWindow:
         Returns:
             This ContextWindow instance.
         """
-        from contextkit.constants import PRIORITY_SYSTEM_PROMPT
-
         block = ContextBlock.system(
             content, priority=priority or PRIORITY_SYSTEM_PROMPT, name=name
         )
@@ -566,8 +572,6 @@ class ContextWindow:
         Returns:
             This ContextWindow instance.
         """
-        from contextkit.constants import PRIORITY_RAG_CHUNK
-
         block = ContextBlock.rag(
             content, priority=priority or PRIORITY_RAG_CHUNK, name=name
         )
@@ -590,8 +594,6 @@ class ContextWindow:
         Returns:
             This ContextWindow instance.
         """
-        from contextkit.constants import PRIORITY_SHORT_TERM_MEMORY
-
         block = ContextBlock(
             type=BlockType.SHORT_TERM_MEMORY,
             content=content,
@@ -617,8 +619,6 @@ class ContextWindow:
         Returns:
             This ContextWindow instance.
         """
-        from contextkit.constants import PRIORITY_TOOL_DEFINITION
-
         block = ContextBlock(
             type=BlockType.TOOL_DEFINITIONS,
             content=content,
@@ -644,8 +644,6 @@ class ContextWindow:
         Returns:
             This ContextWindow instance.
         """
-        from contextkit.constants import PRIORITY_EXAMPLE
-
         block = ContextBlock.examples(
             content, priority=priority or PRIORITY_EXAMPLE, name=name
         )
@@ -670,8 +668,6 @@ class ContextWindow:
         Returns:
             This ContextWindow instance.
         """
-        from contextkit.constants import PRIORITY_FILE_CONTEXT
-
         block = ContextBlock.file(
             content,
             file_path=file_path,
